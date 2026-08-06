@@ -1,7 +1,7 @@
 {
   "name": "frontier-audit",
-  "version": "0.1.0-rc.2",
-  "description": "Score repositories against pinned Frontier conformance rules and optionally issue signed, evidence-bound AAR receipts.",
+  "version": "0.2.0",
+  "description": "Score repositories against The Machine's conformance kit and optionally issue signed AAR evidence receipts via the published @frontier-infra/audit CLI.",
   "author": {
     "name": "Jason Kent Brashear",
     "url": "https://frontierinfra.org"
@@ -20,13 +20,12 @@
   "interface": {
     "displayName": "Frontier Audit",
     "shortDescription": "Audit and attest AI harnesses",
-    "longDescription": "Score a repository against versioned Frontier conformance rules, bind the result to its Git state, and optionally issue a signed AAR evidence receipt. The plugin safely obtains the exact Frontier Audit SDK when needed, verifies its integrity chain, and runs the deterministic SDK-owned scorer. Receipts distinguish structural verifier separation from organizational independence and default to same-principal attestation, not third-party audit.",
+    "longDescription": "Score a repository against The Machine's conformance kit, bind the result to its Git state, and optionally issue a signed AAR evidence receipt. Runs the published @frontier-infra/audit CLI via npx; the evidence packet records the exact CLI version that produced it. Receipts distinguish structural verifier separation from organizational independence and default to same-principal attestation, not third-party audit.",
     "developerName": "Jason Kent Brashear",
     "category": "Security",
     "capabilities": [
       "Repository conformance scoring",
-      "Signed evidence receipts",
-      "Verified SDK bootstrap"
+      "Signed evidence receipts"
     ],
     "defaultPrompt": [
       "Use Frontier Audit to audit and attest this repository.",

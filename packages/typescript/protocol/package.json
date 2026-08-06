@@ -18,5 +18,19 @@
   "license": "MIT",
   "engines": {
     "node": ">=20"
+  },
+  "author": {
+    "name": "Jason Kent Brashear / Frontier Infra",
+    "url": "https://frontierinfra.org"
+  },
+  "homepage": "https://frontierinfra.org",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/frontier-infra/frontier-sdk.git",
+    "directory": "packages/typescript/protocol"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   }
 }

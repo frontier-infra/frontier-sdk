@@ -1,4 +1,4 @@
 interface:
   display_name: "Audit and Attest"
   short_description: "Audit and attest AI harnesses"
-  default_prompt: "Use $audit-and-attest to score this repository with the pinned Frontier Audit SDK and report the evidence, trust anchor, and independence boundary."
+  default_prompt: "Use $audit-and-attest to score this repository with @frontier-infra/audit and report the score, failed obligations, and whether the receipt is self-attested."

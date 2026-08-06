@@ -1,6 +1,6 @@
 {
   "name": "@frontier-infra/audit",
-  "version": "0.1.0-rc.2",
+  "version": "0.1.0",
   "description": "Deterministic repository conformance scoring and signed AAR evidence receipts.",
   "type": "module",
   "bin": {
@@ -36,8 +36,7 @@
   "license": "MIT",
   "publishConfig": {
     "access": "public",
-    "registry": "https://registry.npmjs.org/",
-    "provenance": true
+    "registry": "https://registry.npmjs.org/"
   },
   "engines": {
     "node": ">=20"

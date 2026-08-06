@@ -1,10 +1,6 @@
 {
   "name": "frontier-audit-plugin",
-  "version": "0.1.0-rc.2",
+  "version": "0.2.0",
   "private": true,
-  "type": "module",
-  "scripts": {
-    "test": "node --test tests/*.test.mjs",
-    "validate": "node scripts/validate-plugin.mjs && npm test"
-  }
+  "type": "module"
 }

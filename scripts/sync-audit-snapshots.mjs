@@ -74,6 +74,7 @@ function listFiles(root) {
   if (!fs.existsSync(root)) return [];
   const out = [];
   for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    if (entry.name === '__pycache__') continue;
     const absolute = path.join(root, entry.name);
     if (entry.isDirectory()) out.push(...listFiles(absolute));
     else out.push(absolute);

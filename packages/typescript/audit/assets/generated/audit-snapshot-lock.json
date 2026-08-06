@@ -33,7 +33,7 @@
     "the-machine/kit_json_adapter.py": {
       "generated_sha256": "b223977e4c21220f896f9c76758739412b8c63b051ceeecee9cf8f013e4fe50c",
       "source": "frontier-sdk:scripts/sync-audit-snapshots.mjs",
-      "source_sha256": "f15322036b59523c550d16f872b06c000335650c083bf60df43252b653788a55"
+      "source_sha256": "fc027a783787f6bbfceed60c58440fd7195b0e30f288bf81b1a2ac088672c388"
     },
     "the-machine/kit/__init__.py": {
       "generated_sha256": "2dfb52951a3e1540487607491b52788dd8a5f7ea469f72de17fcdcb4342c5c07",
