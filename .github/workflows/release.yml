@@ -1,0 +1,37 @@
+name: Release
+
+# npm trusted publishing (OIDC): no tokens, provenance attached.
+# Requires each package to have this repo+workflow configured as a
+# trusted publisher on npmjs.com (Settings > Publishing access).
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: npm install -g npm@latest
+      - run: npm run test:node
+      - run: npm run test:python
+      - name: Publish packages with new versions
+        run: |
+          for pkg in packages/typescript/protocol packages/typescript/audit; do
+            name=$(node -p "require('./$pkg/package.json').name")
+            ver=$(node -p "require('./$pkg/package.json').version")
+            if [ "$(npm view "$name@$ver" version 2>/dev/null)" = "$ver" ]; then
+              echo "$name@$ver already on the registry, skipping"
+            else
+              (cd "$pkg" && npm publish --provenance --access public)
+            fi
+          done

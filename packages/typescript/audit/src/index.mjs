@@ -174,6 +174,8 @@ function runKitAdapter({ target, name, shape, jsonOut, markdownOut }) {
   const env = {
     ...process.env,
     PYTHONPATH: kitRoot,
+    // The kit ships as read-only package assets; never litter them with bytecode.
+    PYTHONDONTWRITEBYTECODE: '1',
   };
   const baseArgs = ['-m', 'kit', 'score', target, '--shape', shape];
   if (name) baseArgs.push('--name', name);
