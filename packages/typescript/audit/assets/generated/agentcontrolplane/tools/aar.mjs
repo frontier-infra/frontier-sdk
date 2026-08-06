@@ -76,8 +76,14 @@ async function resolveKey(rec, args) {
     const tail = parts.length ? parts.join("/") + "/" : "";
     doc = await (await fetch(`https://${host}/${tail}.well-known/did.json`)).json();
   }
-  const vm = (doc.verificationMethod || []).find((m) => m.publicKeyJwk);
-  if (!vm) throw new Error("no publicKeyJwk in did document");
+  if (!doc || doc.id !== rec.sig.by) {
+    throw new Error(`DID document id ${doc && doc.id} does not match sig.by ${rec.sig.by}`);
+  }
+  const assertionIds = new Set((doc.assertionMethod || []).map((entry) =>
+    typeof entry === "string" ? entry : entry && entry.id).filter(Boolean));
+  const vm = (doc.verificationMethod || []).find((method) =>
+    method && method.publicKeyJwk && method.controller === rec.sig.by && assertionIds.has(method.id));
+  if (!vm) throw new Error("no assertionMethod publicKeyJwk controlled by sig.by in DID document");
   return crypto.createPublicKey({ key: vm.publicKeyJwk, format: "jwk" });
 }
 
@@ -110,13 +116,14 @@ async function verify(args, file) {
         : "confirmed/contradicted requires checks[] with source, query, observed_at, response_sha256"]);
     }
   }
-  // L2 — independent verifier (structural) + evidence-backed ground_truth. quality is advisory.
+  // L2 — structurally separate verifier + evidence-backed ground_truth. quality is advisory.
   if (rec.verifier !== undefined || rec.ground_truth !== undefined) {
     const indep = !!(rec.verifier && rec.verifier.id && rec.verifier.id !== rec.subject);
-    results.push(["L2", indep, indep ? "independent verifier (id != subject)" : "verifier missing or self-referential (id == subject)"]);
+    results.push(["L2", indep, indep ? "structurally separate verifier (id != subject)" : "verifier missing or self-referential (id == subject)"]);
   }
   const grade = rec.verifier && rec.verifier.independence;
-  if (grade) results.push(["info", true, `independence: ${grade}${grade === "same_principal" ? " (organizational attestation — disclose; not audit-grade)" : ""}`]);
+  if (grade) results.push(["info", true, `organizational independence (claimed): ${grade}${grade === "same_principal" ? " (organizational attestation — not audit-grade)" : ""}`]);
+  if (rec.verifier && rec.verifier.policy_sha256) results.push(["info", true, `verifier policy sha256: ${rec.verifier.policy_sha256}`]);
   if (rec.quality !== undefined) results.push(["info", true, `quality: ${rec.quality} (advisory, non-gating)`]);
   const lvlOk = (lvl) => { const cs = results.filter((c) => c[0] === lvl); return cs.length > 0 && cs.every((c) => c[1]); };
   let level = "FAIL";

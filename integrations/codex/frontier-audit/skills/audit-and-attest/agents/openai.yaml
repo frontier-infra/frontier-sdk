@@ -1,4 +1,4 @@
 interface:
   display_name: "Audit and Attest"
-  short_description: "Bootstrap Frontier Audit SDK safely"
-  default_prompt: "Use $audit-and-attest to inspect the pinned Frontier Audit SDK, request explicit install authorization only if needed, verify provenance, and run the audit."
+  short_description: "Audit and attest AI harnesses"
+  default_prompt: "Use $audit-and-attest to score this repository with the pinned Frontier Audit SDK and report the evidence, trust anchor, and independence boundary."

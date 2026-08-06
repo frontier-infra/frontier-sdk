@@ -1,13 +1,47 @@
 {
-  "schema_version": "frontier.audit.sdk-lock.v1",
+  "schema_version": "frontier.audit.sdk-lock.v2",
   "state": "release-candidate",
   "package": {
     "name": "@frontier-infra/audit",
-    "version": "0.1.0-rc.1",
+    "version": "0.1.0-rc.2",
     "source": "npm",
     "registry": "https://registry.npmjs.org/",
     "integrity": null,
-    "provenance": "Verify package name/version plus the bootstrap provenance record. Release-candidate lock intentionally does not claim published integrity until the package is published and signed."
+    "provenance": "The bundled lane provides integrity from an operator-approved plugin distribution; bootstrap does not independently establish publisher authenticity. The registry lane remains blocked until npm integrity and publisher provenance are pinned."
+  },
+  "trust_anchors": {
+    "bundle": {
+      "type": "operator-approved-plugin-distribution",
+      "root_identifier": "frontier-audit@0.1.0-rc.2",
+      "assurance": "integrity-only",
+      "publisher_authenticity": "NOT_VERIFIED_BY_BOOTSTRAP",
+      "root": "The installed Frontier Audit plugin distribution explicitly approved by the operator.",
+      "chain": [
+        "plugin distribution contains assets/sdk-lock.json",
+        "sdk-lock bundled artifact SHA-256 binds the SDK tarball",
+        "bootstrap package-tree SHA-256 binds the installed SDK files",
+        "SDK audit-snapshot-lock SHA-256 binds scorer and AAR source snapshots"
+      ]
+    },
+    "tarball": {
+      "type": "operator-approved-local-tarball",
+      "assurance": "integrity-only",
+      "publisher_authenticity": "NOT_VERIFIED_BY_BOOTSTRAP",
+      "root": "The absolute local tarball path and SHA-256 explicitly approved by the operator.",
+      "chain": [
+        "operator supplies the expected tarball SHA-256",
+        "bootstrap verifies the tarball SHA-256 before installation",
+        "bootstrap package-tree SHA-256 binds the installed SDK files",
+        "SDK audit-snapshot-lock SHA-256 binds scorer and AAR source snapshots"
+      ]
+    },
+    "registry": {
+      "type": "npm-registry-integrity-and-publisher-provenance",
+      "root": "https://registry.npmjs.org/",
+      "assurance": "NOT_AVAILABLE",
+      "integrity": null,
+      "publisher_provenance": null
+    }
   },
   "binary": "frontier-audit",
   "install": {
@@ -22,8 +56,8 @@
       "registry"
     ],
     "bundled_artifact": {
-      "relative_path": "assets/frontier-infra-audit-0.1.0-rc.1.tgz",
-      "sha256": "646ed1e7dfa9c5e74336a30f7989fc9b866dc84606aece2c98299909436effca"
+      "relative_path": "assets/frontier-infra-audit-0.1.0-rc.2.tgz",
+      "sha256": "ee9955d2ab3d9f4267937ce029a2e4a403cbd21c3604e23e2cfd07f73dfd95ce"
     },
     "cache_directory_name": "frontier-audit-sdk",
     "requires_explicit_authorization": true,

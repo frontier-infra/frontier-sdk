@@ -2,9 +2,9 @@
   "schema_version": "frontier.audit.marketplace-review.v1",
   "plugin": {
     "name": "frontier-audit",
-    "version": "0.1.0-rc.1"
+    "version": "0.1.0-rc.2"
   },
-  "recorded_at": "2026-08-06T04:32:47.163Z",
+  "recorded_at": "2026-08-06T04:55:18.000Z",
   "runner": "evals/run-evals.mjs",
   "environment": {
     "node": "v22.23.1",
@@ -13,15 +13,15 @@
   },
   "release_artifact": {
     "package": "@frontier-infra/audit",
-    "version": "0.1.0-rc.1",
+    "version": "0.1.0-rc.2",
     "source": "bundled",
-    "path": "assets/frontier-infra-audit-0.1.0-rc.1.tgz",
-    "sha256": "646ed1e7dfa9c5e74336a30f7989fc9b866dc84606aece2c98299909436effca"
+    "path": "assets/frontier-infra-audit-0.1.0-rc.2.tgz",
+    "sha256": "ee9955d2ab3d9f4267937ce029a2e4a403cbd21c3604e23e2cfd07f73dfd95ce"
   },
   "canonical_commits": {
-    "frontier_sdk": "e721b72396268cdea5c56a545aa1c39fa1d50a6f",
+    "frontier_sdk": "01e2d2a90ac6dbaca8fbe149e9def825c1d4b2fd",
     "the_machine": "964a5b3985024cd8d24b08e108087f2b8f4216d5",
-    "agentcontrolplane": "3b2dbc1bccecf14d0a145494d20e2730715308ef"
+    "agentcontrolplane": "d20bf3891980e41d2015c9572d3c097b5fa76d6f"
   },
   "cases": [
     {
@@ -43,6 +43,12 @@
       "proof": "Missing SDK reported the bundled package, version, path, SHA-256, target, cache, and no-network source."
     },
     {
+      "id": "bundle_trust_anchor_is_explicit_and_limited",
+      "kind": "positive",
+      "status": "PASS",
+      "proof": "The bundle declared an operator-approved plugin-distribution root, integrity-only assurance, and publisher authenticity NOT_VERIFIED_BY_BOOTSTRAP."
+    },
+    {
       "id": "install_requires_explicit_authorization",
       "kind": "negative",
       "status": "PASS",
@@ -52,7 +58,7 @@
       "id": "approved_local_tarball_installs_and_records_provenance",
       "kind": "positive",
       "status": "PASS",
-      "proof": "Approved SHA-pinned tarball installation resolved ready with v2 provenance and a package-tree manifest."
+      "proof": "Approved SHA-pinned tarball installation resolved ready with v3 provenance, a named local-tarball trust anchor, and a package-tree manifest."
     },
     {
       "id": "ensure_run_installs_and_executes_sdk",
@@ -82,7 +88,13 @@
       "id": "successful_signed_audit_verifies",
       "kind": "positive",
       "status": "PASS",
-      "proof": "The bundled artifact installed, scored a portable Git-backed Machine-L2 fixture, wrote evidence.json and aar.json, and passed offline evidence-hash plus AAR signature verification."
+      "proof": "The bundled artifact installed, scored a portable Git-backed Machine-L2 fixture, stamped SDK version, scorer-policy SHA-256, and same-principal independence, then passed offline evidence-hash plus AAR signature verification."
+    },
+    {
+      "id": "organizational_independence_requires_bound_identities",
+      "kind": "negative",
+      "status": "PASS",
+      "proof": "A third-party disclosure without explicit subject/principal DIDs was rejected, and a receipt naming the verifier DID as subject was also rejected before signing."
     },
     {
       "id": "static_audit_does_not_claim_machine_l3",
@@ -97,11 +109,11 @@
     }
   ],
   "summary": {
-    "total": 11,
-    "passed": 11,
+    "total": 13,
+    "passed": 13,
     "failed": 0,
-    "positive": 7,
-    "negative": 4
+    "positive": 8,
+    "negative": 5
   },
-  "claim_boundary": "These results prove the local static audit/bootstrap/signature path. They do not claim Machine-L3 or organizational verifier independence; six live conformance checks remain NOT_RUN."
+  "claim_boundary": "These results prove the local static audit/bootstrap/signature path and an integrity-only bundled trust chain. They do not prove publisher authenticity, Machine-L3, or organizational verifier independence; the default receipt discloses same_principal and six live conformance checks remain NOT_RUN."
 }

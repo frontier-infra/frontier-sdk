@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sdkRoot = path.resolve(packageRoot, '../../..');
 const cli = path.join(packageRoot, 'src/cli.mjs');
+const aarTool = path.join(packageRoot, 'assets/generated/agentcontrolplane/tools/aar.mjs');
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
@@ -107,7 +108,9 @@ test('frontier-audit emits local JSON and Markdown packets with dirty-tree bindi
 
   const evidence = readJson(path.join(out, 'evidence.json'));
   assert.equal(evidence.schema_version, 'frontier.audit.packet.v1');
-  assert.equal(evidence.package.audit_package_version, '0.1.0-rc.1');
+  assert.equal(evidence.package.audit_package_version, '0.1.0-rc.2');
+  assert.equal(evidence.package.snapshot_lock_sha256, crypto.createHash('sha256')
+    .update(fs.readFileSync(path.join(packageRoot, 'assets/generated/audit-snapshot-lock.json'))).digest('hex'));
   assert.equal(evidence.audit.network_actions, 'NOT_RUN');
   assert.equal(evidence.preflight.dirty, true);
   assert.ok(evidence.preflight.commit);
@@ -199,7 +202,12 @@ test('frontier-audit signs only with explicit key path and verifies with DID JSO
   assert.equal(result.stdout.includes(keys.privatePath), false);
   assert.equal(aar.sig.alg, 'Ed25519');
   assert.equal(aar.principal, 'did:web:audit.example.test');
+  assert.equal(aar.verifier.id, aar.principal);
+  assert.equal(aar.verifier.model, '@frontier-infra/audit@0.1.0-rc.2');
+  assert.equal(aar.verifier.policy_sha256, readJson(path.join(out, 'evidence.json')).package.snapshot_lock_sha256);
+  assert.equal(aar.verifier.independence, 'same_principal');
   assert.match(fs.readFileSync(path.join(out, 'aar-verify.txt'), 'utf8'), /conformance: L2/);
+  assert.match(fs.readFileSync(path.join(out, 'aar-verify.txt'), 'utf8'), /organizational independence \(claimed\): same_principal/);
 
   const verify = run(process.execPath, [
     cli,
@@ -212,6 +220,146 @@ test('frontier-audit signs only with explicit key path and verifies with DID JSO
     keys.didPath,
   ]);
   assert.match(verify.stdout, /evidence sha256/);
+});
+
+test('frontier-audit stamps an explicitly disclosed third-party relationship without changing structural L2', () => {
+  const repo = makeRepo();
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-audit-third-party-'));
+  const keys = makeDidKeyPair(fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-audit-keys-')));
+
+  run(process.execPath, [
+    cli,
+    'run',
+    repo,
+    '--out',
+    out,
+    '--shape',
+    'machine',
+    '--sign-key',
+    keys.privatePath,
+    '--did-json',
+    keys.didPath,
+    '--subject',
+    'did:web:subject.example.test',
+    '--principal',
+    'did:web:owner.example.test',
+    '--verifier-independence',
+    'third_party',
+  ]);
+
+  const aar = readJson(path.join(out, 'aar.json'));
+  assert.equal(aar.verifier.independence, 'third_party');
+  assert.equal(aar.verifier.id, 'did:web:audit.example.test');
+  assert.equal(aar.subject, 'did:web:subject.example.test');
+  assert.equal(aar.principal, 'did:web:owner.example.test');
+  assert.equal(aar.sig.by, aar.verifier.id);
+  assert.match(fs.readFileSync(path.join(out, 'aar-verify.txt'), 'utf8'), /organizational independence \(claimed\): third_party/);
+});
+
+test('frontier-audit rejects a non-same-principal disclosure without explicit subject and principal identities', () => {
+  const repo = makeRepo();
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-audit-unbound-independence-'));
+  const keys = makeDidKeyPair(fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-audit-keys-')));
+
+  const result = run(process.execPath, [
+    cli,
+    'run',
+    repo,
+    '--out',
+    out,
+    '--shape',
+    'machine',
+    '--sign-key',
+    keys.privatePath,
+    '--did-json',
+    keys.didPath,
+    '--verifier-independence',
+    'third_party',
+  ], { allowFailure: true });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /--subject is required/);
+});
+
+test('frontier-audit rejects a signed receipt whose subject is the verifier DID', () => {
+  const repo = makeRepo();
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-audit-self-verifier-'));
+  const keys = makeDidKeyPair(fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-audit-keys-')));
+
+  const result = run(process.execPath, [
+    cli,
+    'run',
+    repo,
+    '--out',
+    out,
+    '--shape',
+    'machine',
+    '--sign-key',
+    keys.privatePath,
+    '--did-json',
+    keys.didPath,
+    '--subject',
+    'did:web:audit.example.test',
+  ], { allowFailure: true });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /--subject must differ from the verifier DID/);
+});
+
+test('frontier-audit verify rejects a signed receipt whose scorer identity does not match its evidence', () => {
+  const repo = makeRepo();
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-audit-scorer-mismatch-'));
+  const keys = makeDidKeyPair(fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-audit-keys-')));
+  run(process.execPath, [
+    cli, 'run', repo, '--out', out, '--shape', 'machine',
+    '--sign-key', keys.privatePath, '--did-json', keys.didPath,
+  ]);
+
+  const aarPath = path.join(out, 'aar.json');
+  const aar = readJson(aarPath);
+  aar.verifier.model = '@frontier-infra/audit@0.0.0-wrong';
+  aar.verifier.policy_sha256 = '0'.repeat(64);
+  fs.writeFileSync(aarPath, `${JSON.stringify(aar, null, 2)}\n`);
+  run(process.execPath, [aarTool, 'sign', aarPath, '--priv', keys.privatePath]);
+
+  const verify = run(process.execPath, [
+    cli, 'verify', '--evidence', path.join(out, 'evidence.json'),
+    '--aar', aarPath, '--did-json', keys.didPath,
+  ], { allowFailure: true });
+  assert.notEqual(verify.status, 0);
+  assert.match(verify.stderr, /AAR verifier model mismatch/);
+
+  aar.verifier.model = '@frontier-infra/audit@0.1.0-rc.2';
+  fs.writeFileSync(aarPath, `${JSON.stringify(aar, null, 2)}\n`);
+  run(process.execPath, [aarTool, 'sign', aarPath, '--priv', keys.privatePath]);
+  const verifyPolicy = run(process.execPath, [
+    cli, 'verify', '--evidence', path.join(out, 'evidence.json'),
+    '--aar', aarPath, '--did-json', keys.didPath,
+  ], { allowFailure: true });
+  assert.notEqual(verifyPolicy.status, 0);
+  assert.match(verifyPolicy.stderr, /policy SHA-256 does not match/);
+});
+
+test('frontier-audit verify rejects an offline DID document not bound to sig.by', () => {
+  const repo = makeRepo();
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-audit-did-mismatch-'));
+  const keysDir = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-audit-keys-'));
+  const keys = makeDidKeyPair(keysDir);
+  run(process.execPath, [
+    cli, 'run', repo, '--out', out, '--shape', 'machine',
+    '--sign-key', keys.privatePath, '--did-json', keys.didPath,
+  ]);
+
+  const did = readJson(keys.didPath);
+  did.id = 'did:web:wrong.example.test';
+  const mismatchedDid = path.join(keysDir, 'wrong-did.json');
+  fs.writeFileSync(mismatchedDid, `${JSON.stringify(did, null, 2)}\n`);
+  const verify = run(process.execPath, [
+    cli, 'verify', '--evidence', path.join(out, 'evidence.json'),
+    '--aar', path.join(out, 'aar.json'), '--did-json', mismatchedDid,
+  ], { allowFailure: true });
+  assert.notEqual(verify.status, 0);
+  assert.match(verify.stderr, /does not match sig\.by/);
 });
 
 test('frontier-audit verify rejects tampered evidence even when AAR is unchanged', () => {

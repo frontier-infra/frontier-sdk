@@ -21,10 +21,16 @@ available only when the operator explicitly selects it, and even then the SDK is
 `.frontier-audit/sdk-install` inside the target repository.
 
 The default SDK source is the bundled audited artifact
-`assets/frontier-infra-audit-0.1.0-rc.1.tgz`, pinned in `assets/sdk-lock.json` with SHA-256
-`646ed1e7dfa9c5e74336a30f7989fc9b866dc84606aece2c98299909436effca`. Registry installation is
+`assets/frontier-infra-audit-0.1.0-rc.2.tgz`, pinned in `assets/sdk-lock.json` with SHA-256
+`ee9955d2ab3d9f4267937ce029a2e4a403cbd21c3604e23e2cfd07f73dfd95ce`. Registry installation is
 available only through the explicit `--source registry` lane and remains blocked until the lock pins
-published integrity.
+published integrity and publisher provenance.
+
+For this release-candidate bundle, the trust root is the exact installed plugin distribution the
+operator approved. The bootstrap verifies the lock, SDK tarball, and installed package tree. The
+SDK then verifies its scorer/AAR snapshot lock. This is an integrity chain; publisher authenticity
+is `NOT_VERIFIED_BY_BOOTSTRAP`. The plugin does not use the vague phrase “provenance verified” as a
+substitute for naming that boundary.
 
 ## What the executable path proves
 
@@ -36,6 +42,12 @@ the supplied DID document.
 This does **not** prove Machine-L3. Live chaos, replay, recovery, and operator-path rows remain
 `NOT_RUN` until they are executed against a real deployment. The signature proves integrity and
 authorship of the recorded claim; organizational independence is a separate property.
+
+The receipt stamps the exact SDK version and scorer-policy SHA-256. AAR L2 means
+`verifier.id != subject`: structural verifier separation. The separately signed
+`verifier.independence` field defaults to `same_principal`, so the normal local path is an
+organizational attestation, not third-party audit-grade. Deterministic scoring makes receipts
+comparable; it does not create a separate owner.
 
 ## Product boundary
 

@@ -58,12 +58,23 @@ records the private key path in emitted artifacts, and never fetches keys or ins
 dependencies. `frontier-audit verify --evidence evidence.json --aar aar.json --did-json did.json`
 recomputes the evidence hash committed by the AAR before running offline signature verification.
 
+Signed receipts identify `@frontier-infra/audit` by exact version and commit to the scorer snapshot
+lock by SHA-256. AAR L2 proves structural verifier separation (`verifier.id != subject`), while
+organizational independence is separately disclosed and defaults to `same_principal`.
+Deterministic execution is reproducible; it is not a substitute for an external auditor.
+
 ## Codex integration
 
 `integrations/codex/frontier-audit` is the thin Codex marketplace adapter for the audit SDK. It
 ships the reviewed SDK tarball inside the plugin, pins its SHA-256, requests explicit approval
 before installing executable code into a durable external cache, verifies the installed package
 tree, and resumes the audit automatically. The plugin does not duplicate scoring or AAR semantics.
+
+For the bundled release-candidate path, the bootstrap trust root is the exact plugin distribution
+the operator approved. It provides an integrity chain from `sdk-lock.json` to the SDK tarball,
+installed package tree, and scorer snapshot lock; it does not claim independently verified
+publisher authenticity. The registry lane remains blocked until npm integrity and publisher
+provenance are pinned.
 
 Run its release checks independently:
 

@@ -48,7 +48,7 @@ node evals/run-evals.mjs
 To test an already-built package, use:
 
 ```sh
-FRONTIER_AUDIT_SDK_TARBALL=/path/to/frontier-infra-audit-0.1.0-rc.1.tgz \
+FRONTIER_AUDIT_SDK_TARBALL=/path/to/frontier-infra-audit-0.1.0-rc.2.tgz \
 FRONTIER_AUDIT_SDK_SHA256=<sha256> \
 node evals/run-evals.mjs
 ```

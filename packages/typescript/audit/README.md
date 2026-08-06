@@ -1,7 +1,7 @@
 # @frontier-infra/audit
 
 Publishable Node package for local Frontier static audit packets. Current release:
-`0.1.0-rc.1`.
+`0.1.0-rc.2`.
 
 It installs the `frontier-audit` executable and bundles generated, provenance-locked snapshots of:
 
@@ -59,6 +59,22 @@ frontier-audit verify \
 Verification first recomputes the `evidence.json` SHA-256 and checks it against the signed AAR
 commitment, then invokes the bundled AAR verifier offline with the provided DID JSON. Tampering
 with `evidence.json` fails even if `aar.json` itself is unchanged.
+
+Verification also requires the DID document, controller, and assertion method to match `sig.by`;
+requires `sig.by == verifier.id` and `verifier.id != subject`; requires AAR L2; and requires the
+receipt's SDK version and scorer-policy SHA-256 to match the signed evidence packet.
+
+The AAR stamps the exact SDK version and the SHA-256 of `audit-snapshot-lock.json` in
+`verifier.model` and `verifier.policy_sha256`. That makes receipts comparable against a pinned
+scoring procedure rather than model-generated instructions.
+
+`verifier.id != subject` establishes only AAR L2 structural separation. The separately disclosed
+`verifier.independence` field defaults to `same_principal`, which is an organizational attestation
+and is not third-party audit independence. A separate process, deterministic scorer, or distinct
+signing key does not change that relationship. An authorized external verifier may explicitly set
+`--verifier-independence separate_principal` or `third_party`, but must also supply the audited
+`--subject` DID and its `--principal` DID. The principal must differ from the signing verifier DID.
+Consumers still apply their own identity and trust policy to that signed disclosure.
 
 ## Boundary
 

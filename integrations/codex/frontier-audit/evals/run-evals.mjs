@@ -13,8 +13,8 @@ const evalRoot = path.dirname(fileURLToPath(import.meta.url));
 const pluginRoot = path.resolve(evalRoot, '..');
 const bootstrap = path.join(pluginRoot, 'scripts/bootstrap-sdk.mjs');
 const casesPath = path.join(evalRoot, 'reviewer-cases.jsonl');
-const bundledArtifactRelative = 'assets/frontier-infra-audit-0.1.0-rc.1.tgz';
-const bundledArtifactHash = '646ed1e7dfa9c5e74336a30f7989fc9b866dc84606aece2c98299909436effca';
+const bundledArtifactRelative = 'assets/frontier-infra-audit-0.1.0-rc.2.tgz';
+const bundledArtifactHash = 'ee9955d2ab3d9f4267937ce029a2e4a403cbd21c3604e23e2cfd07f73dfd95ce';
 
 const outputRoot = path.resolve(process.env.FRONTIER_AUDIT_EVAL_OUT ?? fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-audit-evals-')));
 fs.mkdirSync(outputRoot, { recursive: true });
@@ -59,7 +59,7 @@ function parseJsonStdout(result) {
   return JSON.parse(text);
 }
 
-function writeSdkFixture(directory, version = '0.1.0-rc.1') {
+function writeSdkFixture(directory, version = '0.1.0-rc.2') {
   fs.mkdirSync(path.join(directory, 'bin'), { recursive: true });
   fs.writeFileSync(
     path.join(directory, 'package.json'),
@@ -250,6 +250,7 @@ function ensureRealSignedAudit(context) {
     evidenceJson,
     aarJson,
     didJson,
+    privateKey,
     audit_stdout: audit.stdout,
     verify_stdout: verify.stdout,
   };
@@ -286,11 +287,29 @@ const evaluators = {
     assert.equal(result.status, 2);
     assert.equal(report.status, 'missing');
     assert.equal(report.action.package, '@frontier-infra/audit');
-    assert.equal(report.action.version, '0.1.0-rc.1');
+    assert.equal(report.action.version, '0.1.0-rc.2');
     assert.equal(report.action.source_type, 'bundle');
     assert.equal(report.action.bundled_artifact.relative_path, bundledArtifactRelative);
     assert.equal(report.action.bundled_artifact.sha256, bundledArtifactHash);
     return { proof: report.action };
+  },
+
+  bundle_trust_anchor_is_explicit_and_limited() {
+    const project = tempDir('trust-target');
+    const cache = tempDir('trust-cache');
+    const result = runBootstrap(['inspect', '--project-root', project, '--cache-root', cache, '--json']);
+    const report = parseJsonStdout(result);
+    assert.equal(result.status, 2);
+    assert.equal(report.action.trust_anchor.type, 'operator-approved-plugin-distribution');
+    assert.equal(report.action.trust_anchor.assurance, 'integrity-only');
+    assert.equal(report.action.trust_anchor.publisher_authenticity, 'NOT_VERIFIED_BY_BOOTSTRAP');
+    return {
+      proof: {
+        root: report.action.trust_anchor.root,
+        assurance: report.action.trust_anchor.assurance,
+        publisher_authenticity: report.action.trust_anchor.publisher_authenticity,
+      },
+    };
   },
 
   install_requires_explicit_authorization() {
@@ -438,12 +457,66 @@ const evaluators = {
 
   successful_signed_audit_verifies(context) {
     const audit = ensureRealSignedAudit(context);
+    const evidence = JSON.parse(fs.readFileSync(audit.evidenceJson, 'utf8'));
+    const aar = JSON.parse(fs.readFileSync(audit.aarJson, 'utf8'));
+    assert.equal(aar.verifier.id, aar.principal);
+    assert.equal(aar.verifier.model, '@frontier-infra/audit@0.1.0-rc.2');
+    assert.equal(aar.verifier.policy_sha256, evidence.package.snapshot_lock_sha256);
+    assert.equal(aar.verifier.independence, 'same_principal');
     return {
       proof: {
         sdk_source: audit.source,
         evidence_json: audit.evidenceJson,
         aar_json: audit.aarJson,
+        verifier_model: aar.verifier.model,
+        verifier_policy_sha256: aar.verifier.policy_sha256,
+        structural_separation: aar.verifier.id !== aar.subject,
+        organizational_independence: aar.verifier.independence,
         verify: audit.verify_stdout.trim().split('\n').at(0),
+      },
+    };
+  },
+
+  organizational_independence_requires_bound_identities(context) {
+    const audit = ensureRealSignedAudit(context);
+    const out = tempDir('unbound-independence');
+    const result = runBootstrap([
+      'run',
+      '--project-root',
+      audit.targetRepo,
+      '--cache-root',
+      audit.cache,
+      '--',
+      'run',
+      audit.targetRepo,
+      '--out',
+      out,
+      '--shape',
+      'machine',
+      '--sign-key',
+      audit.privateKey,
+      '--did-json',
+      audit.didJson,
+      '--verifier-independence',
+      'third_party',
+    ]);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /--subject is required/);
+    const selfVerifier = runBootstrap([
+      'run', '--project-root', audit.targetRepo, '--cache-root', audit.cache, '--',
+      'run', audit.targetRepo, '--out', tempDir('self-verifier'), '--shape', 'machine',
+      '--sign-key', audit.privateKey, '--did-json', audit.didJson,
+      '--subject', 'did:web:frontier-audit.eval',
+      '--principal', 'did:web:subject-owner.eval',
+      '--verifier-independence', 'third_party',
+    ]);
+    assert.notEqual(selfVerifier.status, 0);
+    assert.match(selfVerifier.stderr, /--subject must differ from the verifier DID/);
+    return {
+      proof: {
+        missing_identity_status: result.status,
+        self_verifier_status: selfVerifier.status,
+        reasons: ['--subject is required', '--subject must differ from verifier DID'],
       },
     };
   },

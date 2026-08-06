@@ -9,8 +9,8 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const bootstrap = path.join(root, 'scripts/bootstrap-sdk.mjs');
-const bundledArtifactRelative = 'assets/frontier-infra-audit-0.1.0-rc.1.tgz';
-const bundledArtifactHash = '646ed1e7dfa9c5e74336a30f7989fc9b866dc84606aece2c98299909436effca';
+const bundledArtifactRelative = 'assets/frontier-infra-audit-0.1.0-rc.2.tgz';
+const bundledArtifactHash = 'ee9955d2ab3d9f4267937ce029a2e4a403cbd21c3604e23e2cfd07f73dfd95ce';
 
 function tempDir(label) {
   return fs.mkdtempSync(path.join(os.tmpdir(), `frontier-audit-${label}-`));
@@ -27,7 +27,7 @@ function run(args, options = {}) {
   };
 }
 
-function writeSdkFixture(directory, version = '0.1.0-rc.1') {
+function writeSdkFixture(directory, version = '0.1.0-rc.2') {
   fs.mkdirSync(path.join(directory, 'bin'), { recursive: true });
   fs.writeFileSync(
     path.join(directory, 'package.json'),
@@ -204,14 +204,14 @@ function seedRegistryInstall(installRoot) {
     provenancePath(installRoot),
     JSON.stringify(
       {
-        schema_version: 'frontier.audit.sdk-provenance.v2',
-        package: { name: '@frontier-infra/audit', version: '0.1.0-rc.1' },
-        source: { type: 'npm', registry: 'https://registry.npmjs.org/', spec: '@frontier-infra/audit@0.1.0-rc.1', integrity: null },
+        schema_version: 'frontier.audit.sdk-provenance.v3',
+        package: { name: '@frontier-infra/audit', version: '0.1.0-rc.2' },
+        source: { type: 'npm', registry: 'https://registry.npmjs.org/', spec: '@frontier-infra/audit@0.1.0-rc.2', integrity: null },
         approval: {
           approved: true,
           source_type: 'npm',
           package: '@frontier-infra/audit',
-          version: '0.1.0-rc.1',
+          version: '0.1.0-rc.2',
           integrity: null,
           approved_at: '2026-08-06T00:00:00.000Z',
         },
@@ -241,7 +241,7 @@ describe('bootstrap-sdk', () => {
     const result = run(['inspect', '--project-root', project, '--cache-root', cache, '--json']);
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.json.status, 'ready');
-    assert.equal(result.json.installed.version, '0.1.0-rc.1');
+    assert.equal(result.json.installed.version, '0.1.0-rc.2');
     assert.equal(result.json.signing.status, 'NOT_RUN');
     assert.equal(result.json.install_root, cacheInstallRoot(cache));
     assert.notEqual(result.json.install_root, project);
@@ -257,6 +257,9 @@ describe('bootstrap-sdk', () => {
     assert.equal(result.json.action.source_type, 'bundle');
     assert.equal(result.json.action.bundled_artifact.relative_path, bundledArtifactRelative);
     assert.equal(result.json.action.bundled_artifact.sha256, bundledArtifactHash);
+    assert.equal(result.json.action.trust_anchor.type, 'operator-approved-plugin-distribution');
+    assert.equal(result.json.action.trust_anchor.assurance, 'integrity-only');
+    assert.equal(result.json.action.trust_anchor.publisher_authenticity, 'NOT_VERIFIED_BY_BOOTSTRAP');
     assert.equal(fs.existsSync(path.join(project, 'node_modules')), false);
     assert.equal(result.json.action.location, cacheInstallRoot(cache));
   });
@@ -330,11 +333,27 @@ describe('bootstrap-sdk', () => {
     assert.equal(resolve.status, 0, resolve.stderr);
     assert.equal(resolve.json.status, 'ready');
     assert.equal(resolve.json.provenance.source.sha256, hash);
-    assert.equal(resolve.json.provenance.schema_version, 'frontier.audit.sdk-provenance.v2');
+    assert.equal(resolve.json.provenance.schema_version, 'frontier.audit.sdk-provenance.v3');
     assert.equal(resolve.json.provenance.approval.approved, true);
     assert.equal(resolve.json.provenance.approval.sha256, hash);
     assert.equal(resolve.json.provenance.package_tree.schema_version, 'frontier.audit.package-tree.v1');
     assert.match(resolve.json.provenance.package_tree.hash, /^[0-9a-f]{64}$/);
+    assert.equal(resolve.json.provenance.trust_anchor.type, 'operator-approved-local-tarball');
+    assert.equal(resolve.json.provenance.trust_anchor.publisher_authenticity, 'NOT_VERIFIED_BY_BOOTSTRAP');
+  });
+
+  test('modified trust-anchor provenance fails closed', () => {
+    const project = tempDir('trust-anchor-target');
+    const cache = tempDir('trust-anchor-cache');
+    const installRoot = cacheInstallRoot(cache);
+    seedReadyInstall(installRoot);
+    mutateProvenance(installRoot, (provenance) => {
+      provenance.trust_anchor.assurance = 'publisher-authenticated';
+    });
+    const result = run(['inspect', '--project-root', project, '--cache-root', cache, '--json']);
+    assert.equal(result.status, 2);
+    assert.equal(result.json.status, 'provenance_mismatch');
+    assert.match(result.json.provenance_errors.join('\n'), /trust anchor mismatch/);
   });
 
   test('registry provenance is not ready while lock integrity is unpublished', () => {
@@ -716,6 +735,9 @@ describe('bootstrap-sdk', () => {
     assert.equal(resolve.json.provenance.source.relative_path, bundledArtifactRelative);
     assert.equal(resolve.json.provenance.source.sha256, bundledArtifactHash);
     assert.equal(resolve.json.provenance.approval.source_type, 'bundle');
+    assert.equal(resolve.json.provenance.trust_anchor.type, 'operator-approved-plugin-distribution');
+    assert.equal(resolve.json.provenance.trust_anchor.assurance, 'integrity-only');
+    assert.equal(resolve.json.provenance.trust_anchor.publisher_authenticity, 'NOT_VERIFIED_BY_BOOTSTRAP');
   });
 
   test('failed staging install leaves previous verified install untouched', () => {

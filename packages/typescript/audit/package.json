@@ -1,7 +1,7 @@
 {
   "name": "@frontier-infra/audit",
-  "version": "0.1.0-rc.1",
-  "description": "Local static audit CLI for The Machine conformance evidence packets.",
+  "version": "0.1.0-rc.2",
+  "description": "Deterministic repository conformance scoring and signed AAR evidence receipts.",
   "type": "module",
   "bin": {
     "frontier-audit": "./src/cli.mjs"

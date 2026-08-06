@@ -12,7 +12,7 @@ const pluginRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.
 const lockPath = path.join(pluginRoot, 'assets/sdk-lock.json');
 const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
 const sdk = lock.package;
-const provenanceSchemaVersion = 'frontier.audit.sdk-provenance.v2';
+const provenanceSchemaVersion = 'frontier.audit.sdk-provenance.v3';
 const packageTreeSchemaVersion = 'frontier.audit.package-tree.v1';
 
 const exitCodes = {
@@ -197,6 +197,13 @@ function bundledArtifact() {
   return { relativePath, absolutePath, expectedSha256 };
 }
 
+function trustAnchor(sourceType) {
+  const key = sourceType === sdk.source ? 'registry' : sourceType;
+  const anchor = lock.trust_anchors?.[key];
+  if (!anchor) throw new Error(`sdk lock missing ${key} trust anchor`);
+  return anchor;
+}
+
 function stableJson(value) {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
   if (value && typeof value === 'object') {
@@ -351,6 +358,7 @@ function inspect(options) {
       registry: sdk.registry,
       integrity: sdk.integrity,
       state: lock.state,
+      trust_anchor: trustAnchor(options.source),
     },
     location: options.location,
     install_root: installRoot(options),
@@ -402,6 +410,13 @@ function inspect(options) {
     if (provenance.package?.name !== sdk.name) provenanceErrors.push('provenance package name mismatch');
     if (provenance.package?.version !== sdk.version) provenanceErrors.push('provenance package version mismatch');
     if (provenance.lock_sha256 !== sha256(lockPath)) provenanceErrors.push('sdk lock hash mismatch');
+    try {
+      if (stableJson(provenance.trust_anchor) !== stableJson(trustAnchor(provenance.source?.type))) {
+        provenanceErrors.push('trust anchor mismatch');
+      }
+    } catch (error) {
+      provenanceErrors.push(error.message);
+    }
     if (provenance.install_root !== installRoot(options)) provenanceErrors.push('provenance install root mismatch');
     if (provenance.source?.type === 'tarball' || provenance.source?.type === 'bundle') {
       if (!provenance.source.sha256) provenanceErrors.push('tarball provenance missing sha256');
@@ -469,6 +484,7 @@ function installAction(options) {
     location: installRoot(options),
     target_repo: options.projectRoot,
     network: options.source === 'registry' ? 'requires --allow-network, published integrity, pinned registry, and user approval' : 'not required',
+    trust_anchor: trustAnchor(options.source),
   };
 }
 
@@ -702,6 +718,7 @@ function installReport(options) {
           approved_at: new Date().toISOString(),
         },
     package_tree: packageTree,
+    trust_anchor: trustAnchor(sourceRecord.type),
     lock_sha256: sha256(lockPath),
     installed_at: new Date().toISOString(),
     install_root: installRoot(options),

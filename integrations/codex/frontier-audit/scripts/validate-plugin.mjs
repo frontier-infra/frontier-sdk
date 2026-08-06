@@ -47,25 +47,42 @@ if (manifest.skills !== './skills/') fail('manifest skills must be ./skills/');
 if (manifest.interface?.composerIcon !== './assets/frontier-audit.svg') fail('manifest composerIcon must use bundled brand asset');
 if (manifest.interface?.logo !== './assets/frontier-audit.svg') fail('manifest logo must use bundled brand asset');
 if ((manifest.interface?.shortDescription?.length ?? 0) > 30) fail('manifest shortDescription must be 30 characters or fewer');
+if (manifest.interface?.category !== 'Security') fail('manifest category must be Security');
+if (!manifest.interface?.longDescription?.startsWith('Score a repository')) {
+  fail('manifest longDescription must lead with the repository outcome');
+}
 const logoHash = crypto.createHash('sha256').update(fs.readFileSync(path.join(root, 'assets/frontier-audit.svg'))).digest('hex');
 if (logoHash !== '757880c103954dac78a65d600d5b07d3ca0e8ca948fb21b95a6170f218c04041') {
   fail('plugin icon must use the canonical Frontier Infra bridge mark');
 }
 
 const lock = readJson('assets/sdk-lock.json');
-if (lock.schema_version !== 'frontier.audit.sdk-lock.v1') fail('sdk lock schema version mismatch');
+if (lock.schema_version !== 'frontier.audit.sdk-lock.v2') fail('sdk lock schema version mismatch');
 if (lock.state !== 'release-candidate') fail('sdk lock must record release-candidate state');
 if (lock.package?.name !== '@frontier-infra/audit') fail('sdk lock package name mismatch');
-if (lock.package?.version !== '0.1.0-rc.1') fail('sdk lock package version mismatch');
+if (lock.package?.version !== '0.1.0-rc.2') fail('sdk lock package version mismatch');
 if (lock.package?.integrity !== null) fail('release-candidate lock must not fake published integrity');
+if (lock.trust_anchors?.bundle?.type !== 'operator-approved-plugin-distribution') {
+  fail('bundle trust anchor must name the operator-approved plugin distribution');
+}
+if (lock.trust_anchors?.bundle?.assurance !== 'integrity-only') fail('bundle trust anchor must claim integrity-only');
+if (lock.trust_anchors?.bundle?.publisher_authenticity !== 'NOT_VERIFIED_BY_BOOTSTRAP') {
+  fail('bundle trust anchor must not claim publisher authenticity');
+}
+if (lock.trust_anchors?.tarball?.type !== 'operator-approved-local-tarball') {
+  fail('local tarball override must name its distinct trust anchor');
+}
+if (lock.trust_anchors?.registry?.assurance !== 'NOT_AVAILABLE') {
+  fail('registry trust anchor must remain unavailable for the release candidate');
+}
 if (lock.install?.default_source !== 'bundle') fail('sdk install default source must be bundled artifact');
 if (!Array.isArray(lock.install?.allowed_sources) || !lock.install.allowed_sources.includes('registry')) {
   fail('sdk lock must preserve explicit registry source lane');
 }
-if (lock.install?.bundled_artifact?.relative_path !== 'assets/frontier-infra-audit-0.1.0-rc.1.tgz') {
+if (lock.install?.bundled_artifact?.relative_path !== 'assets/frontier-infra-audit-0.1.0-rc.2.tgz') {
   fail('sdk lock must pin bundled artifact relative path');
 }
-if (lock.install?.bundled_artifact?.sha256 !== '646ed1e7dfa9c5e74336a30f7989fc9b866dc84606aece2c98299909436effca') {
+if (lock.install?.bundled_artifact?.sha256 !== 'ee9955d2ab3d9f4267937ce029a2e4a403cbd21c3604e23e2cfd07f73dfd95ce') {
   fail('sdk lock must pin bundled artifact sha256');
 }
 if (lock.install?.bundled_artifact?.relative_path) {
@@ -90,6 +107,11 @@ if (!skill.includes('node "$PLUGIN_ROOT/scripts/bootstrap-sdk.mjs" inspect')) fa
 if (!skill.includes('ensure-run')) fail('skill must use install+resume command after approved install');
 if (!skill.includes('bundled artifact by default')) fail('skill must document bundled artifact default install');
 if (!skill.includes('Pass it to the SDK as `--sign-key <path>`')) fail('skill must align signing key flag with SDK --sign-key');
+if (!skill.includes('structural verifier separation')) fail('skill must distinguish structural verifier separation');
+if (!skill.includes('NOT_VERIFIED_BY_BOOTSTRAP')) fail('skill must disclose the bundle publisher-authenticity boundary');
+if (!skill.includes('Do not use the unqualified phrase “provenance verified.”')) {
+  fail('skill must prohibit vague provenance claims');
+}
 
 const evalCases = fs.readFileSync(path.join(root, 'evals/reviewer-cases.jsonl'), 'utf8')
   .split('\n')
@@ -120,11 +142,13 @@ for (const required of [
   'skill activation',
   'arbitrary cwd',
   'missing SDK bootstrap',
+  'named trust-anchor boundary',
   'explicit install authorization',
   'tarball hash mismatch',
   'registry blocked when integrity null',
   'inline key rejection',
   'successful signed audit/verification',
+  'organizational independence disclosure boundary',
   'no Machine-L3/full-conformance claim while live rows are NOT_RUN',
 ]) {
   if (!evalCases.some((entry) => Array.isArray(entry.covers) && entry.covers.includes(required))) {

@@ -8,6 +8,8 @@ function usage() {
   return `Usage:
   frontier-audit run <target> --out <dir> [--name NAME] [--shape auto|machine|orchestrator]
                      [--sign-key private-jwk.json --did-json did.json] [--subject did:web:...]
+                     [--principal did:web:...]
+                     [--verifier-independence same_principal|separate_principal|third_party]
   frontier-audit verify --evidence evidence.json --aar aar.json --did-json did.json
 
 Local-only static audit. The CLI does not install dependencies, fetch DID documents,
@@ -34,6 +36,8 @@ function parse(argv) {
     else if (cmd === 'run' && arg === '--sign-key') options.signKeyPath = next;
     else if (arg === '--did-json') options.didJsonPath = next;
     else if (cmd === 'run' && arg === '--subject') options.subject = next;
+    else if (cmd === 'run' && arg === '--principal') options.principal = next;
+    else if (cmd === 'run' && arg === '--verifier-independence') options.verifierIndependence = next;
     else if (cmd === 'verify' && arg === '--evidence') options.evidenceJsonPath = next;
     else if (cmd === 'verify' && arg === '--aar') options.aarPath = next;
     else throw new Error(`unknown option: ${arg}`);

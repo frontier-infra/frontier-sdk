@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const AUDIT_PACKAGE_VERSION = '0.1.0-rc.1';
+export const AUDIT_PACKAGE_VERSION = '0.1.0-rc.2';
 export const AUDIT_PACKET_SCHEMA_VERSION = 'frontier.audit.packet.v1';
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -141,6 +141,7 @@ function packageMetadata(snapshotLock) {
     audit_package_version: AUDIT_PACKAGE_VERSION,
     node: process.version,
     platform: `${os.platform()}-${os.arch()}`,
+    snapshot_lock_sha256: sha256(fs.readFileSync(snapshotLockPath)),
     snapshot_lock: snapshotLock,
   };
 }
@@ -225,10 +226,25 @@ function renderMarkdown(packet, kitMarkdown, signing) {
   return `${lines.join('\n')}\n`;
 }
 
-function aarRecord({ packet, evidenceJsonPath, evidenceJson, didJsonPath }) {
+function aarRecord({ packet, evidenceJsonPath, evidenceJson, didJsonPath, verifierIndependence, principalId }) {
   const did = readJson(didJsonPath);
   if (typeof did.id !== 'string' || !did.id.trim()) {
     throw new Error('--did-json must contain a top-level DID id');
+  }
+  const principal = principalId ?? did.id;
+  if (packet.target.subject === did.id) {
+    throw new Error('--subject must differ from the verifier DID for a signed Frontier Audit receipt');
+  }
+  if (verifierIndependence !== 'same_principal') {
+    if (packet.target.subject_source !== 'operator_supplied') {
+      throw new Error('--subject is required when --verifier-independence is separate_principal or third_party');
+    }
+    if (!principalId) {
+      throw new Error('--principal is required when --verifier-independence is separate_principal or third_party');
+    }
+    if (principal === did.id) {
+      throw new Error('--principal must differ from the verifier DID for separate_principal or third_party receipts');
+    }
   }
   const observedAt = packet.audit.issued_at;
   const response = {
@@ -244,7 +260,7 @@ function aarRecord({ packet, evidenceJsonPath, evidenceJson, didJsonPath }) {
   return {
     aar: '0.02',
     subject: packet.target.subject,
-    principal: did.id,
+    principal,
     task: {
       id: packet.audit.id,
       claim: `Generated a local static Frontier audit evidence packet for ${packet.target.name} at ${packet.preflight.commit}`,
@@ -261,28 +277,33 @@ function aarRecord({ packet, evidenceJsonPath, evidenceJson, didJsonPath }) {
       excerpt: JSON.stringify(response),
     }],
     verifier: {
-      id: `${did.id}:frontier-audit`,
-      model: '@frontier-infra/audit',
-      independence: 'same_principal',
+      id: did.id,
+      model: `@frontier-infra/audit@${AUDIT_PACKAGE_VERSION}`,
+      policy_sha256: packet.package.snapshot_lock_sha256,
+      independence: verifierIndependence,
     },
     issued: observedAt,
+    sig: { by: did.id },
   };
 }
 
-function signAndVerify({ packet, evidenceJsonPath, evidenceJson, outDir, signKeyPath, didJsonPath }) {
+function signAndVerify({ packet, evidenceJsonPath, evidenceJson, outDir, signKeyPath, didJsonPath, verifierIndependence, principalId }) {
   if (!signKeyPath && !didJsonPath) return null;
   if (!signKeyPath || !didJsonPath) {
     throw new Error('signing requires both --sign-key and --did-json so verification stays offline and explicit');
   }
 
   const aarPath = path.join(outDir, 'aar.json');
-  writeJson(aarPath, aarRecord({ packet, evidenceJsonPath, evidenceJson, didJsonPath }));
+  writeJson(aarPath, aarRecord({ packet, evidenceJsonPath, evidenceJson, didJsonPath, verifierIndependence, principalId }));
   run(process.execPath, [aarTool, 'sign', aarPath, '--priv', signKeyPath]);
   const verification = run(process.execPath, [aarTool, 'verify', aarPath, '--did-json', didJsonPath], { allowFailure: true });
   const verifyText = `${verification.stdout || ''}${verification.stderr || ''}`;
   fs.writeFileSync(path.join(outDir, 'aar-verify.txt'), verifyText);
   if (verification.status !== 0) {
     throw new Error(`AAR signature verification failed; see ${path.join(outDir, 'aar-verify.txt')}`);
+  }
+  if (!/conformance: L2\b/.test(verifyText)) {
+    throw new Error(`signed Frontier Audit receipts must satisfy AAR L2; see ${path.join(outDir, 'aar-verify.txt')}`);
   }
   return {
     aar_path: aarPath,
@@ -303,8 +324,12 @@ export function runAudit(options = {}) {
   const outDir = path.resolve(options.outDir ?? path.join(process.cwd(), 'frontier-audit-evidence'));
   const name = options.name ?? path.basename(target);
   const shape = options.shape ?? 'auto';
+  const verifierIndependence = options.verifierIndependence ?? 'same_principal';
   if (!['auto', 'machine', 'orchestrator'].includes(shape)) {
     throw new Error('--shape must be auto, machine, or orchestrator');
+  }
+  if (!['same_principal', 'separate_principal', 'third_party'].includes(verifierIndependence)) {
+    throw new Error('--verifier-independence must be same_principal, separate_principal, or third_party');
   }
 
   const preflight = collectGitBinding(target);
@@ -329,6 +354,7 @@ export function runAudit(options = {}) {
       name,
       path: target,
       subject: options.subject ?? `did:web:frontier-audit.local:${sha256(Buffer.from(target)).slice(0, 16)}`,
+      subject_source: options.subject ? 'operator_supplied' : 'derived_local_repository_id',
       output_inside_target: isInside(outDir, target),
     },
     package: packageMetadata(snapshotLock),
@@ -352,6 +378,8 @@ export function runAudit(options = {}) {
     outDir,
     signKeyPath: options.signKeyPath,
     didJsonPath: options.didJsonPath,
+    verifierIndependence,
+    principalId: options.principal,
   });
   if (signing) writeJson(path.join(outDir, 'signature.json'), signing);
   const kitMarkdown = fs.readFileSync(kitMarkdownPath, 'utf8');
@@ -405,17 +433,37 @@ export function verifyAudit(options = {}) {
   if (!fs.existsSync(aarPath)) throw new Error(`AAR not found: ${aarPath}`);
 
   const aar = readJson(aarPath);
+  const evidence = readJson(evidenceJsonPath);
   const commitment = parseAarEvidenceCommitment(aar);
   const evidenceBytes = fs.readFileSync(evidenceJsonPath);
   const actualEvidenceHash = sha256(evidenceBytes);
   if (actualEvidenceHash !== commitment.evidence_packet_sha256) {
     throw new Error(`evidence.json hash mismatch: expected ${commitment.evidence_packet_sha256}, got ${actualEvidenceHash}`);
   }
+  const expectedModel = `@frontier-infra/audit@${evidence.package?.audit_package_version ?? ''}`;
+  if (aar.verifier?.model !== expectedModel) {
+    throw new Error(`AAR verifier model mismatch: expected ${expectedModel}, got ${aar.verifier?.model}`);
+  }
+  if (!evidence.package?.snapshot_lock_sha256 || aar.verifier?.policy_sha256 !== evidence.package.snapshot_lock_sha256) {
+    throw new Error('AAR verifier policy SHA-256 does not match evidence package snapshot lock');
+  }
+  if (!aar.sig?.by || aar.verifier?.id !== aar.sig.by) {
+    throw new Error('AAR verifier id must match sig.by for Frontier Audit receipts');
+  }
+  if (aar.subject === aar.verifier.id) {
+    throw new Error('AAR subject must differ from verifier id for Frontier Audit L2 receipts');
+  }
+  if (!['same_principal', 'separate_principal', 'third_party'].includes(aar.verifier?.independence)) {
+    throw new Error('AAR verifier independence disclosure is missing or invalid');
+  }
 
   const verification = run(process.execPath, [aarTool, 'verify', aarPath, '--did-json', didJsonPath], { allowFailure: true });
   const output = `${verification.stdout || ''}${verification.stderr || ''}`;
   if (verification.status !== 0) {
     throw new Error(`AAR signature verification failed:\n${output.trim()}`);
+  }
+  if (!/conformance: L2\b/.test(output)) {
+    throw new Error(`Frontier Audit receipt does not satisfy AAR L2:\n${output.trim()}`);
   }
   return {
     aar_path: aarPath,

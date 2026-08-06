@@ -3,7 +3,7 @@
     "agentcontrolplane": {
       "repository": "https://github.com/frontier-infra/agentcontrolplane",
       "local_path": "../agentcontrolplane",
-      "commit": "3b2dbc1bccecf14d0a145494d20e2730715308ef",
+      "commit": "b65fb781dce9f41b49e3f53c8ee5d7257d4a2960",
       "path_scope": [
         "tools/aar.mjs"
       ],
@@ -23,12 +23,12 @@
   },
   "generated_by": "frontier-sdk/scripts/sync-audit-snapshots.mjs",
   "package": "@frontier-infra/audit",
-  "package_version": "0.1.0-rc.1",
+  "package_version": "0.1.0-rc.2",
   "files": {
     "agentcontrolplane/tools/aar.mjs": {
-      "generated_sha256": "38676ce8c5f0b68cb4510ae5c23c21353c6e85a339f451fac21f588f3e132199",
+      "generated_sha256": "c03cd2104660b3a0b1855c0b2274f8033cdfe5b52c89040aff68a19848ec7bb7",
       "source": "agentcontrolplane/tools/aar.mjs",
-      "source_sha256": "38676ce8c5f0b68cb4510ae5c23c21353c6e85a339f451fac21f588f3e132199"
+      "source_sha256": "c03cd2104660b3a0b1855c0b2274f8033cdfe5b52c89040aff68a19848ec7bb7"
     },
     "the-machine/kit_json_adapter.py": {
       "generated_sha256": "b223977e4c21220f896f9c76758739412b8c63b051ceeecee9cf8f013e4fe50c",
