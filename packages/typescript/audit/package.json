@@ -1,0 +1,45 @@
+{
+  "name": "@frontier-infra/audit",
+  "version": "0.1.0-rc.1",
+  "description": "Local static audit CLI for The Machine conformance evidence packets.",
+  "type": "module",
+  "bin": {
+    "frontier-audit": "./src/cli.mjs"
+  },
+  "exports": {
+    ".": {
+      "import": "./src/index.mjs"
+    }
+  },
+  "files": [
+    "assets/generated",
+    "src",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "author": {
+    "name": "Jason Kent Brashear / Frontier Infra",
+    "url": "https://frontierinfra.org"
+  },
+  "homepage": "https://frontierinfra.org",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/frontier-infra/frontier-sdk.git",
+    "directory": "packages/typescript/audit"
+  },
+  "bugs": {
+    "url": "https://github.com/frontier-infra/frontier-sdk/issues"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/",
+    "provenance": true
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -18,6 +18,7 @@ reducers, and cross-language conformance fixtures. It does not supersede those s
 | Package | Purpose | Status |
 | --- | --- | --- |
 | `@frontier-infra/protocol` | JavaScript runtime, TypeScript declarations, health schema constants, and deterministic reference reducer | runnable scaffold |
+| `@frontier-infra/audit` | Node CLI (`frontier-audit`) for local static audit evidence packets using locked The Machine kit + AAR snapshots | executable vertical slice |
 | `frontier-protocol` | Python binding and equivalent deterministic reference reducer | runnable scaffold |
 | `conformance/runtime-health` | Shared golden fixtures consumed by both language packages and downstream adapters | canonical fixture corpus |
 
@@ -40,12 +41,30 @@ node scripts/sync-consumers.mjs ../plugins/frontier-infra
 
 to refresh the Codex plugin snapshot.
 
+The audit package also ships generated snapshots, but from the canonical standards it executes:
+
+```bash
+npm run sync:audit
+npm run check:audit
+```
+
+`frontier-audit run <repo> --out <dir>` binds the target Git commit and dirty tree, verifies its
+generated snapshot hashes, runs the canonical The Machine static kit locally, emits
+`evidence.json` and `evidence.md`, and leaves live chaos/replay checks as `NOT_RUN`. The output
+directory must resolve outside the audited Git repository, including symlinked paths. Detached AAR
+signing is opt-in and requires both `--sign-key <private-jwk>` and
+`--did-json <public-did-json>`; the CLI verifies immediately with that provided DID JSON, never
+records the private key path in emitted artifacts, and never fetches keys or installs
+dependencies. `frontier-audit verify --evidence evidence.json --aar aar.json --did-json did.json`
+recomputes the evidence hash committed by the AAR before running offline signature verification.
+
 ## Verify
 
 ```bash
 npm run test:node
 npm run test:python
 npm run check:consumers -- ../plugins/frontier-infra
+npm run check:audit
 ```
 
 Passing these tests proves schema/reducer parity against the bundled fixtures. It does not certify

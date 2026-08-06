@@ -7,10 +7,12 @@
     "packages/typescript/*"
   ],
   "scripts": {
-    "test:node": "node --test packages/typescript/protocol/test/*.test.mjs",
+    "test:node": "node --test packages/typescript/protocol/test/*.test.mjs packages/typescript/audit/test/*.test.mjs",
     "test:python": "PYTHONPATH=packages/python/frontier-protocol/src python3 -m unittest discover -s packages/python/frontier-protocol/tests -v",
     "sync:consumers": "node scripts/sync-consumers.mjs",
-    "check:consumers": "node scripts/sync-consumers.mjs --check"
+    "check:consumers": "node scripts/sync-consumers.mjs --check",
+    "sync:audit": "node scripts/sync-audit-snapshots.mjs",
+    "check:audit": "node scripts/sync-audit-snapshots.mjs --check"
   },
   "license": "MIT",
   "engines": {

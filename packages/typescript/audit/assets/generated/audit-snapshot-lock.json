@@ -1,0 +1,69 @@
+{
+  "canonical_sources": {
+    "agentcontrolplane": {
+      "repository": "https://github.com/frontier-infra/agentcontrolplane",
+      "local_path": "../agentcontrolplane",
+      "commit": "3b2dbc1bccecf14d0a145494d20e2730715308ef",
+      "path_scope": [
+        "tools/aar.mjs"
+      ],
+      "dirty": false,
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "the_machine": {
+      "repository": "https://github.com/frontier-infra/the-machine",
+      "local_path": "../the-machine",
+      "commit": "964a5b3985024cd8d24b08e108087f2b8f4216d5",
+      "path_scope": [
+        "kit"
+      ],
+      "dirty": false,
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "generated_by": "frontier-sdk/scripts/sync-audit-snapshots.mjs",
+  "package": "@frontier-infra/audit",
+  "package_version": "0.1.0-rc.1",
+  "files": {
+    "agentcontrolplane/tools/aar.mjs": {
+      "generated_sha256": "38676ce8c5f0b68cb4510ae5c23c21353c6e85a339f451fac21f588f3e132199",
+      "source": "agentcontrolplane/tools/aar.mjs",
+      "source_sha256": "38676ce8c5f0b68cb4510ae5c23c21353c6e85a339f451fac21f588f3e132199"
+    },
+    "the-machine/kit_json_adapter.py": {
+      "generated_sha256": "b223977e4c21220f896f9c76758739412b8c63b051ceeecee9cf8f013e4fe50c",
+      "source": "frontier-sdk:scripts/sync-audit-snapshots.mjs",
+      "source_sha256": "f15322036b59523c550d16f872b06c000335650c083bf60df43252b653788a55"
+    },
+    "the-machine/kit/__init__.py": {
+      "generated_sha256": "2dfb52951a3e1540487607491b52788dd8a5f7ea469f72de17fcdcb4342c5c07",
+      "source": "the-machine/kit/__init__.py",
+      "source_sha256": "2dfb52951a3e1540487607491b52788dd8a5f7ea469f72de17fcdcb4342c5c07"
+    },
+    "the-machine/kit/__main__.py": {
+      "generated_sha256": "16c9f71dfcb99d626b9458e85e64916521c9b86bff0c57951f346b972844b61c",
+      "source": "the-machine/kit/__main__.py",
+      "source_sha256": "16c9f71dfcb99d626b9458e85e64916521c9b86bff0c57951f346b972844b61c"
+    },
+    "the-machine/kit/checks.py": {
+      "generated_sha256": "0d26aae5a1ab90c32a24727a75b0114095d3fc8caa6726cfdd835359e9873d94",
+      "source": "the-machine/kit/checks.py",
+      "source_sha256": "0d26aae5a1ab90c32a24727a75b0114095d3fc8caa6726cfdd835359e9873d94"
+    },
+    "the-machine/kit/obligations.py": {
+      "generated_sha256": "32aef003cf60b65a65dcc5f3ed43dfd6bd028dd0e173153c716d89aae45bd54f",
+      "source": "the-machine/kit/obligations.py",
+      "source_sha256": "32aef003cf60b65a65dcc5f3ed43dfd6bd028dd0e173153c716d89aae45bd54f"
+    },
+    "the-machine/kit/packet.py": {
+      "generated_sha256": "5bb4fab3924570c4b9f7190a738d1548a1e75877cf5ee48813eeb15a799f0267",
+      "source": "the-machine/kit/packet.py",
+      "source_sha256": "5bb4fab3924570c4b9f7190a738d1548a1e75877cf5ee48813eeb15a799f0267"
+    },
+    "the-machine/kit/score.py": {
+      "generated_sha256": "babe17f9cc4400315548c47ec3b3bcefd4d7e0497bca85b34aad6d7050dd3e6f",
+      "source": "the-machine/kit/score.py",
+      "source_sha256": "babe17f9cc4400315548c47ec3b3bcefd4d7e0497bca85b34aad6d7050dd3e6f"
+    }
+  }
+}
