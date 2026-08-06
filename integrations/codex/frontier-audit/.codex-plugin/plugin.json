@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "description": "Score repositories against The Machine's conformance kit and optionally issue signed AAR evidence receipts via the published @frontier-infra/audit CLI.",
   "author": {
-    "name": "Jason Kent Brashear",
+    "name": "Titanium Computing",
     "url": "https://frontierinfra.org"
   },
   "homepage": "https://frontierinfra.org/sdk",
@@ -21,7 +21,7 @@
     "displayName": "Frontier Audit",
     "shortDescription": "Audit and attest AI harnesses",
     "longDescription": "Score a repository against The Machine's conformance kit, bind the result to its Git state, and optionally issue a signed AAR evidence receipt. Runs the published @frontier-infra/audit CLI via npx; the evidence packet records the exact CLI version that produced it. Receipts distinguish structural verifier separation from organizational independence and default to same-principal attestation, not third-party audit.",
-    "developerName": "Jason Kent Brashear",
+    "developerName": "Titanium Computing",
     "category": "Security",
     "capabilities": [
       "Repository conformance scoring",
@@ -29,7 +29,7 @@
     ],
     "defaultPrompt": [
       "Use Frontier Audit to audit and attest this repository.",
-      "Bootstrap the pinned Frontier Audit SDK and run an evidence-bound audit."
+      "Run an evidence-bound audit with the published Frontier Audit CLI."
     ],
     "brandColor": "#0E7C2E",
     "composerIcon": "./assets/frontier-audit.svg",

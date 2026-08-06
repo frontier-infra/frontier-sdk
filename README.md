@@ -66,23 +66,10 @@ Deterministic execution is reproducible; it is not a substitute for an external 
 ## Codex integration
 
 `integrations/codex/frontier-audit` is the thin Codex marketplace adapter for the audit SDK. It
-ships the reviewed SDK tarball inside the plugin, pins its SHA-256, requests explicit approval
-before installing executable code into a durable external cache, verifies the installed package
-tree, and resumes the audit automatically. The plugin does not duplicate scoring or AAR semantics.
-
-For the bundled release-candidate path, the bootstrap trust root is the exact plugin distribution
-the operator approved. It provides an integrity chain from `sdk-lock.json` to the SDK tarball,
-installed package tree, and scorer snapshot lock; it does not claim independently verified
-publisher authenticity. The registry lane remains blocked until npm integrity and publisher
-provenance are pinned.
-
-Run its release checks independently:
-
-```bash
-cd integrations/codex/frontier-audit
-npm run validate
-node evals/run-evals.mjs
-```
+runs the published `@frontier-infra/audit` CLI through `npx`. The evidence packet records the exact
+CLI version and scorer snapshot lock. Host permissions govern package installation; the adapter
+does not bundle a tarball, implement a second bootstrap trust system, or duplicate scoring and AAR
+semantics in prompt text.
 
 ## Verify
 
