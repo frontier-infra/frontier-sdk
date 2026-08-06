@@ -58,6 +58,21 @@ records the private key path in emitted artifacts, and never fetches keys or ins
 dependencies. `frontier-audit verify --evidence evidence.json --aar aar.json --did-json did.json`
 recomputes the evidence hash committed by the AAR before running offline signature verification.
 
+## Codex integration
+
+`integrations/codex/frontier-audit` is the thin Codex marketplace adapter for the audit SDK. It
+ships the reviewed SDK tarball inside the plugin, pins its SHA-256, requests explicit approval
+before installing executable code into a durable external cache, verifies the installed package
+tree, and resumes the audit automatically. The plugin does not duplicate scoring or AAR semantics.
+
+Run its release checks independently:
+
+```bash
+cd integrations/codex/frontier-audit
+npm run validate
+node evals/run-evals.mjs
+```
+
 ## Verify
 
 ```bash

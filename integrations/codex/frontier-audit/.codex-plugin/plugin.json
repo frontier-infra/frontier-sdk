@@ -1,0 +1,42 @@
+{
+  "name": "frontier-audit",
+  "version": "0.1.0-rc.1",
+  "description": "Adopt the installable Frontier Audit SDK from Codex with explicit bootstrap, provenance checks, and evidence-bound audit execution.",
+  "author": {
+    "name": "Jason Kent Brashear",
+    "url": "https://frontierinfra.org"
+  },
+  "homepage": "https://frontierinfra.org",
+  "repository": "https://github.com/frontier-infra/frontier-sdk/tree/main/integrations/codex/frontier-audit",
+  "license": "MIT",
+  "keywords": [
+    "audit",
+    "attestation",
+    "provenance",
+    "agent-harness",
+    "frontier-infra"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Frontier Audit",
+    "shortDescription": "Score and attest AI harnesses",
+    "longDescription": "A thin adoption plugin for the installable Frontier Audit SDK. It inspects local SDK availability first, requests explicit install authorization when the pinned SDK is absent or unverifiable, verifies version and provenance, then runs the SDK-owned audit and attestation workflow without redefining scorer or AAR semantics.",
+    "developerName": "Jason Kent Brashear",
+    "category": "Productivity",
+    "capabilities": [
+      "Local bootstrap",
+      "SDK provenance verification",
+      "Audit execution guidance"
+    ],
+    "defaultPrompt": [
+      "Use Frontier Audit to audit and attest this repository.",
+      "Bootstrap the pinned Frontier Audit SDK and run an evidence-bound audit."
+    ],
+    "brandColor": "#0E7C2E",
+    "composerIcon": "./assets/frontier-audit.svg",
+    "logo": "./assets/frontier-audit.svg",
+    "websiteURL": "https://frontierinfra.org",
+    "privacyPolicyURL": "https://frontierinfra.org/privacy",
+    "termsOfServiceURL": "https://frontierinfra.org/terms"
+  }
+}

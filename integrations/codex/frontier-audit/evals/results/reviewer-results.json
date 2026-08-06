@@ -1,0 +1,107 @@
+{
+  "schema_version": "frontier.audit.marketplace-review.v1",
+  "plugin": {
+    "name": "frontier-audit",
+    "version": "0.1.0-rc.1"
+  },
+  "recorded_at": "2026-08-06T04:32:47.163Z",
+  "runner": "evals/run-evals.mjs",
+  "environment": {
+    "node": "v22.23.1",
+    "os": "Darwin",
+    "arch": "arm64"
+  },
+  "release_artifact": {
+    "package": "@frontier-infra/audit",
+    "version": "0.1.0-rc.1",
+    "source": "bundled",
+    "path": "assets/frontier-infra-audit-0.1.0-rc.1.tgz",
+    "sha256": "646ed1e7dfa9c5e74336a30f7989fc9b866dc84606aece2c98299909436effca"
+  },
+  "canonical_commits": {
+    "frontier_sdk": "e721b72396268cdea5c56a545aa1c39fa1d50a6f",
+    "the_machine": "964a5b3985024cd8d24b08e108087f2b8f4216d5",
+    "agentcontrolplane": "3b2dbc1bccecf14d0a145494d20e2730715308ef"
+  },
+  "cases": [
+    {
+      "id": "skill_activation_contract",
+      "kind": "positive",
+      "status": "PASS",
+      "proof": "SKILL.md requires inspect before run or ensure-run."
+    },
+    {
+      "id": "arbitrary_cwd_keeps_target_repo_separate",
+      "kind": "positive",
+      "status": "PASS",
+      "proof": "An arbitrary cwd remained separate from the explicit target and external cache."
+    },
+    {
+      "id": "missing_sdk_reports_install_action",
+      "kind": "positive",
+      "status": "PASS",
+      "proof": "Missing SDK reported the bundled package, version, path, SHA-256, target, cache, and no-network source."
+    },
+    {
+      "id": "install_requires_explicit_authorization",
+      "kind": "negative",
+      "status": "PASS",
+      "proof": "Install returned approval_required and created no install tree."
+    },
+    {
+      "id": "approved_local_tarball_installs_and_records_provenance",
+      "kind": "positive",
+      "status": "PASS",
+      "proof": "Approved SHA-pinned tarball installation resolved ready with v2 provenance and a package-tree manifest."
+    },
+    {
+      "id": "ensure_run_installs_and_executes_sdk",
+      "kind": "positive",
+      "status": "PASS",
+      "proof": "ensure-run installed a missing SDK and resumed the original SDK arguments from the target cwd."
+    },
+    {
+      "id": "tarball_hash_mismatch_blocks_install",
+      "kind": "negative",
+      "status": "PASS",
+      "proof": "A mismatched SHA-256 returned hash_mismatch and created no install tree."
+    },
+    {
+      "id": "registry_blocked_when_integrity_null",
+      "kind": "negative",
+      "status": "PASS",
+      "proof": "The explicit registry lane returned registry_integrity_unavailable before network installation."
+    },
+    {
+      "id": "inline_signing_key_rejected",
+      "kind": "negative",
+      "status": "PASS",
+      "proof": "Inline private-key material was rejected before SDK execution; only a local key path is accepted."
+    },
+    {
+      "id": "successful_signed_audit_verifies",
+      "kind": "positive",
+      "status": "PASS",
+      "proof": "The bundled artifact installed, scored a portable Git-backed Machine-L2 fixture, wrote evidence.json and aar.json, and passed offline evidence-hash plus AAR signature verification."
+    },
+    {
+      "id": "static_audit_does_not_claim_machine_l3",
+      "kind": "positive",
+      "status": "PASS",
+      "proof": {
+        "static_candidate_level_name": "Machine-L2 Instrumented",
+        "full_conformance_claimed": false,
+        "live_checks_executed": false,
+        "not_run_live_checks": 6
+      }
+    }
+  ],
+  "summary": {
+    "total": 11,
+    "passed": 11,
+    "failed": 0,
+    "positive": 7,
+    "negative": 4
+  },
+  "claim_boundary": "These results prove the local static audit/bootstrap/signature path. They do not claim Machine-L3 or organizational verifier independence; six live conformance checks remain NOT_RUN."
+}

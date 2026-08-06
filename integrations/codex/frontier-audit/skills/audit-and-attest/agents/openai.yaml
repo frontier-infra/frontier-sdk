@@ -1,0 +1,4 @@
+interface:
+  display_name: "Audit and Attest"
+  short_description: "Bootstrap Frontier Audit SDK safely"
+  default_prompt: "Use $audit-and-attest to inspect the pinned Frontier Audit SDK, request explicit install authorization only if needed, verify provenance, and run the audit."

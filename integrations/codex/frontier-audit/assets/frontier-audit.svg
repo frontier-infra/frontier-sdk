@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Frontier Infra</title>
+  <desc id="desc">The Frontier Infra bridge mark on the canonical dark field.</desc>
+  <rect width="64" height="64" rx="14" fill="#0b0f0c"/>
+  <defs>
+    <linearGradient id="fi-mid" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0e7c2e"/>
+      <stop offset="100%" stop-color="#3ddc7e"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(0,-1)">
+    <path d="M16 48 L16 16 L32 16" fill="none" stroke="#e7f0e7" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <polygon points="8,52 52,52 44,48 16,48" fill="none" stroke="#e7f0e7" stroke-width="2.6"/>
+    <polygon points="16,36 48,36 40,32 24,32" fill="url(#fi-mid)"/>
+    <polygon points="24,20 44,20 36,16 32,16" fill="none" stroke="#e7f0e7" stroke-width="2.6"/>
+  </g>
+</svg>
