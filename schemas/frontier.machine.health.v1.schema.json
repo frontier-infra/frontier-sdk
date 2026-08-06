@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frontierinfra.org/schemas/frontier.machine.health.v1.schema.json",
+  "x-frontier-canonical-source": "https://github.com/frontier-infra/frontier-sdk/blob/main/schemas/frontier.machine.health.v1.schema.json",
+  "x-frontier-protocol-package-version": "0.1.0",
+  "title": "Frontier Infra Runtime Health Contract",
+  "type": "object",
+  "required": ["schema_version", "deployment_id", "checked_at", "layers"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "frontier.machine.health.v1" },
+    "deployment_id": { "type": "string", "minLength": 1 },
+    "checked_at": { "type": "string", "format": "date-time" },
+    "layers": {
+      "type": "object",
+      "required": ["process", "scheduler", "execution", "governance"],
+      "additionalProperties": false,
+      "properties": {
+        "process": { "$ref": "#/$defs/layer" },
+        "scheduler": { "$ref": "#/$defs/layer" },
+        "execution": { "$ref": "#/$defs/layer" },
+        "governance": { "$ref": "#/$defs/layer" }
+      }
+    },
+    "aggregate_policy": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "status": { "const": "fail_closed" },
+        "rule": { "type": "string" },
+        "warning": { "type": "string" }
+      }
+    }
+  },
+  "$defs": {
+    "layer": {
+      "type": "object",
+      "required": ["checks"],
+      "additionalProperties": true,
+      "properties": {
+        "purpose": { "type": "string" },
+        "checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/check" }
+        }
+      }
+    },
+    "check": {
+      "type": "object",
+      "required": ["id", "status", "observed_at", "stale_after_seconds", "summary"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["pass", "fail", "unknown"] },
+        "critical": { "type": "boolean", "default": true },
+        "reason_code": {
+          "enum": [
+            "auth_failed",
+            "credit_exhausted",
+            "missing_verifier",
+            "stale_verifier",
+            "unratified_contract",
+            "active_override",
+            "no_ack_halt",
+            "scheduler_stalled",
+            "worker_unavailable",
+            "governance_gate_failed"
+          ]
+        },
+        "degradation_code": { "type": "string" },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "stale_after_seconds": { "type": "integer", "minimum": 1 },
+        "summary": { "type": "string", "minLength": 1 },
+        "evidence": { "type": "string" }
+      }
+    }
+  }
+}

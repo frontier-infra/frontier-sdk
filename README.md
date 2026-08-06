@@ -1,0 +1,62 @@
+# Frontier SDK
+
+Frontier SDK is the implementation family for building governed agent applications without
+depending on a particular model provider, coding harness, or dashboard.
+
+The standards remain canonical in their own repositories:
+
+- AVL defines agent-readable views and ground-truth surfaces.
+- AAR defines portable signed records and their evidence limits.
+- ADL defines coding-worker contract and proof discipline.
+- The Machine defines long-running harness obligations and conformance levels.
+
+This repository owns shared protocol schemas, generated language types, deterministic reference
+reducers, and cross-language conformance fixtures. It does not supersede those standards.
+
+## First packages
+
+| Package | Purpose | Status |
+| --- | --- | --- |
+| `@frontier-infra/protocol` | JavaScript runtime, TypeScript declarations, health schema constants, and deterministic reference reducer | runnable scaffold |
+| `frontier-protocol` | Python binding and equivalent deterministic reference reducer | runnable scaffold |
+| `conformance/runtime-health` | Shared golden fixtures consumed by both language packages and downstream adapters | canonical fixture corpus |
+
+The kernel client, application, inference, runtime, actions, and broader conformance packages will
+be added only when they have an executable vertical slice. Empty packages are deliberately not
+published as architecture placeholders.
+
+## Contract ownership
+
+`schemas/frontier.machine.health.v1.schema.json` is the canonical schema for the four-layer runtime
+health record. `packages/typescript/protocol/src/index.mjs` and
+`packages/python/frontier-protocol/src/frontier_protocol/runtime_health.py` are reference reducers.
+
+Consumers may ship generated snapshots for offline use, but they must carry a protocol lock and
+must not be edited independently. Run:
+
+```bash
+node scripts/sync-consumers.mjs ../plugins/frontier-infra
+```
+
+to refresh the Codex plugin snapshot.
+
+## Verify
+
+```bash
+npm run test:node
+npm run test:python
+npm run check:consumers -- ../plugins/frontier-infra
+```
+
+Passing these tests proves schema/reducer parity against the bundled fixtures. It does not certify
+any deployment as Machine-L3.
+
+## Release boundary
+
+- Provider and harness adapters translate capabilities; they do not grant authority.
+- Only a deterministic gate may authorize durable mutation.
+- Unknown or malformed health evidence fails closed.
+- A package version and schema version must be recorded in downstream receipts.
+- Machine conformance levels require executed deployment evidence, not SDK installation.
+
+MIT. See `LICENSE`.

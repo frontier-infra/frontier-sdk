@@ -1,0 +1,54 @@
+{
+  "schema_version": "frontier.machine.health.v1",
+  "deployment_id": "invalid-structural-evidence",
+  "checked_at": "2026-08-05T12:00:00Z",
+  "layers": {
+    "process": {
+      "checks": [
+        {
+          "id": "driver",
+          "status": "pass",
+          "critical": true,
+          "observed_at": "2026-08-05T12:00:00Z",
+          "stale_after_seconds": 60
+        }
+      ]
+    },
+    "scheduler": {
+      "checks": [
+        {
+          "id": "scheduler",
+          "status": "pass",
+          "critical": true,
+          "observed_at": "2026-08-05T12:00:00Z",
+          "stale_after_seconds": 60,
+          "summary": "Scheduler is healthy."
+        }
+      ]
+    },
+    "execution": {
+      "checks": [
+        {
+          "id": "worker",
+          "status": "pass",
+          "critical": true,
+          "observed_at": "2026-08-05T12:00:00Z",
+          "stale_after_seconds": 60,
+          "summary": "Worker execution is healthy."
+        }
+      ]
+    },
+    "governance": {
+      "checks": [
+        {
+          "id": "gate",
+          "status": "pass",
+          "critical": true,
+          "observed_at": "2026-08-05T12:00:00Z",
+          "stale_after_seconds": 60,
+          "summary": "Governance gate is healthy."
+        }
+      ]
+    }
+  }
+}

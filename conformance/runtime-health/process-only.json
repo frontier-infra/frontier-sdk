@@ -1,0 +1,23 @@
+{
+  "schema_version": "frontier.machine.health.v1",
+  "deployment_id": "demo-process-only",
+  "checked_at": "2026-08-06T00:00:00Z",
+  "layers": {
+    "process": {
+      "checks": [
+        {
+          "id": "process-heartbeat",
+          "status": "pass",
+          "critical": true,
+          "observed_at": "2026-08-05T23:59:50Z",
+          "stale_after_seconds": 60,
+          "summary": "HTTP heartbeat responded."
+        }
+      ]
+    }
+  },
+  "aggregate_policy": {
+    "status": "fail_closed",
+    "rule": "A live process is insufficient without scheduler, execution, and governance."
+  }
+}

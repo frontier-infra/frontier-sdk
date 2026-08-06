@@ -1,0 +1,59 @@
+{
+  "schema_version": "frontier.machine.health.v1",
+  "deployment_id": "demo-healthy",
+  "checked_at": "2026-08-06T00:00:00Z",
+  "layers": {
+    "process": {
+      "checks": [
+        {
+          "id": "process-heartbeat",
+          "status": "pass",
+          "critical": true,
+          "observed_at": "2026-08-05T23:59:50Z",
+          "stale_after_seconds": 60,
+          "summary": "HTTP heartbeat responded."
+        }
+      ]
+    },
+    "scheduler": {
+      "checks": [
+        {
+          "id": "queue-claim",
+          "status": "pass",
+          "critical": true,
+          "observed_at": "2026-08-05T23:59:45Z",
+          "stale_after_seconds": 120,
+          "summary": "Due work was claimed and ACKed."
+        }
+      ]
+    },
+    "execution": {
+      "checks": [
+        {
+          "id": "worker-smoke",
+          "status": "pass",
+          "critical": true,
+          "observed_at": "2026-08-05T23:59:30Z",
+          "stale_after_seconds": 300,
+          "summary": "Representative worker completed a provider-backed smoke task."
+        }
+      ]
+    },
+    "governance": {
+      "checks": [
+        {
+          "id": "gate-deny",
+          "status": "pass",
+          "critical": true,
+          "observed_at": "2026-08-05T23:59:20Z",
+          "stale_after_seconds": 300,
+          "summary": "Gate denied an unauthorized mutation and wrote an audit event."
+        }
+      ]
+    }
+  },
+  "aggregate_policy": {
+    "status": "fail_closed",
+    "rule": "All four layers must pass fresh critical checks."
+  }
+}

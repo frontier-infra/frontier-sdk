@@ -1,0 +1,22 @@
+{
+  "name": "@frontier-infra/protocol",
+  "version": "0.1.0",
+  "description": "Provider- and harness-neutral Frontier protocol types and reference reducers.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.mjs"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "schema_version": "frontier.machine.health.v1",
+  "deployment_id": "demo-governance-dead",
+  "checked_at": "2026-08-06T00:00:00Z",
+  "layers": {
+    "process": {
+      "checks": [
+        {
+          "id": "process-heartbeat",
+          "status": "pass",
+          "critical": true,
+          "observed_at": "2026-08-05T23:59:55Z",
+          "stale_after_seconds": 60,
+          "summary": "HTTP heartbeat responded."
+        }
+      ]
+    },
+    "scheduler": {
+      "checks": [
+        {
+          "id": "queue-claim",
+          "status": "pass",
+          "critical": true,
+          "observed_at": "2026-08-05T23:59:40Z",
+          "stale_after_seconds": 120,
+          "summary": "Due work was claimed."
+        }
+      ]
+    },
+    "execution": {
+      "checks": [
+        {
+          "id": "worker-smoke",
+          "status": "pass",
+          "critical": true,
+          "observed_at": "2026-08-05T23:59:30Z",
+          "stale_after_seconds": 300,
+          "summary": "Worker smoke completed."
+        }
+      ]
+    },
+    "governance": {
+      "checks": [
+        {
+          "id": "gate-deny",
+          "status": "unknown",
+          "critical": true,
+          "reason_code": "missing_verifier",
+          "observed_at": "2026-08-05T23:40:00Z",
+          "stale_after_seconds": 300,
+          "summary": "No current deny-path result from the governance gate."
+        }
+      ]
+    }
+  },
+  "aggregate_policy": {
+    "status": "fail_closed",
+    "rule": "Missing or stale verifier evidence forces propose-only."
+  }
+}

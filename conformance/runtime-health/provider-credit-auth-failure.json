@@ -1,0 +1,61 @@
+{
+  "schema_version": "frontier.machine.health.v1",
+  "deployment_id": "demo-provider-auth-credit-failure",
+  "checked_at": "2026-08-06T00:00:00Z",
+  "layers": {
+    "process": {
+      "checks": [
+        {
+          "id": "process-heartbeat",
+          "status": "pass",
+          "critical": true,
+          "observed_at": "2026-08-05T23:59:55Z",
+          "stale_after_seconds": 60,
+          "summary": "Service process heartbeat is green."
+        }
+      ]
+    },
+    "scheduler": {
+      "checks": [
+        {
+          "id": "queue-claim",
+          "status": "pass",
+          "critical": true,
+          "observed_at": "2026-08-05T23:59:40Z",
+          "stale_after_seconds": 120,
+          "summary": "Scheduler continues to claim queued work."
+        }
+      ]
+    },
+    "execution": {
+      "checks": [
+        {
+          "id": "provider-smoke",
+          "status": "fail",
+          "critical": true,
+          "reason_code": "credit_exhausted",
+          "observed_at": "2026-08-05T23:59:30Z",
+          "stale_after_seconds": 300,
+          "summary": "The provider-backed worker smoke check failed with a credit/auth error while the service process stayed alive.",
+          "evidence": "HTTP 401/402 class response from representative provider-backed execution path."
+        }
+      ]
+    },
+    "governance": {
+      "checks": [
+        {
+          "id": "gate-deny",
+          "status": "pass",
+          "critical": true,
+          "observed_at": "2026-08-05T23:59:15Z",
+          "stale_after_seconds": 300,
+          "summary": "Governance gate denied an unauthorized mutation."
+        }
+      ]
+    }
+  },
+  "aggregate_policy": {
+    "status": "fail_closed",
+    "rule": "Execution auth or credit failure blocks mutation even when process and scheduler are alive."
+  }
+}

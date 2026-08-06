@@ -1,0 +1,19 @@
+{
+  "name": "frontier-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/typescript/*"
+  ],
+  "scripts": {
+    "test:node": "node --test packages/typescript/protocol/test/*.test.mjs",
+    "test:python": "PYTHONPATH=packages/python/frontier-protocol/src python3 -m unittest discover -s packages/python/frontier-protocol/tests -v",
+    "sync:consumers": "node scripts/sync-consumers.mjs",
+    "check:consumers": "node scripts/sync-consumers.mjs --check"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}
