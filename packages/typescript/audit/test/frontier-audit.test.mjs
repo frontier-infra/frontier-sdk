@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { AUDIT_PACKAGE_VERSION } from '../src/index.mjs';
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sdkRoot = path.resolve(packageRoot, '../../..');
@@ -108,7 +109,7 @@ test('frontier-audit emits local JSON and Markdown packets with dirty-tree bindi
 
   const evidence = readJson(path.join(out, 'evidence.json'));
   assert.equal(evidence.schema_version, 'frontier.audit.packet.v1');
-  assert.equal(evidence.package.audit_package_version, '0.1.0-rc.2');
+  assert.equal(evidence.package.audit_package_version, AUDIT_PACKAGE_VERSION);
   assert.equal(evidence.package.snapshot_lock_sha256, crypto.createHash('sha256')
     .update(fs.readFileSync(path.join(packageRoot, 'assets/generated/audit-snapshot-lock.json'))).digest('hex'));
   assert.equal(evidence.audit.network_actions, 'NOT_RUN');
@@ -203,7 +204,7 @@ test('frontier-audit signs only with explicit key path and verifies with DID JSO
   assert.equal(aar.sig.alg, 'Ed25519');
   assert.equal(aar.principal, 'did:web:audit.example.test');
   assert.equal(aar.verifier.id, aar.principal);
-  assert.equal(aar.verifier.model, '@frontier-infra/audit@0.1.0-rc.2');
+  assert.equal(aar.verifier.model, `@frontier-infra/audit@${AUDIT_PACKAGE_VERSION}`);
   assert.equal(aar.verifier.policy_sha256, readJson(path.join(out, 'evidence.json')).package.snapshot_lock_sha256);
   assert.equal(aar.verifier.independence, 'same_principal');
   assert.match(fs.readFileSync(path.join(out, 'aar-verify.txt'), 'utf8'), /conformance: L2/);
@@ -329,7 +330,7 @@ test('frontier-audit verify rejects a signed receipt whose scorer identity does 
   assert.notEqual(verify.status, 0);
   assert.match(verify.stderr, /AAR verifier model mismatch/);
 
-  aar.verifier.model = '@frontier-infra/audit@0.1.0-rc.2';
+  aar.verifier.model = `@frontier-infra/audit@${AUDIT_PACKAGE_VERSION}`;
   fs.writeFileSync(aarPath, `${JSON.stringify(aar, null, 2)}\n`);
   run(process.execPath, [aarTool, 'sign', aarPath, '--priv', keys.privatePath]);
   const verifyPolicy = run(process.execPath, [

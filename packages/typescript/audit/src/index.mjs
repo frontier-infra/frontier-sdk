@@ -5,10 +5,13 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const AUDIT_PACKAGE_VERSION = '0.1.0-rc.2';
-export const AUDIT_PACKET_SCHEMA_VERSION = 'frontier.audit.packet.v1';
-
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+// Derived, never hand-maintained: 0.1.1 shipped receipts stamped 0.1.0-rc.2.
+export const AUDIT_PACKAGE_VERSION = JSON.parse(
+  fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8'),
+).version;
+export const AUDIT_PACKET_SCHEMA_VERSION = 'frontier.audit.packet.v1';
 const generatedRoot = path.join(packageRoot, 'assets/generated');
 const kitAdapter = path.join(generatedRoot, 'the-machine/kit_json_adapter.py');
 const kitRoot = path.join(generatedRoot, 'the-machine');

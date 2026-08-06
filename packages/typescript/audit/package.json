@@ -1,6 +1,6 @@
 {
   "name": "@frontier-infra/audit",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Deterministic repository conformance scoring and signed AAR evidence receipts.",
   "type": "module",
   "bin": {
