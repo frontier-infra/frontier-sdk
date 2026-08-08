@@ -13,7 +13,7 @@ jobs:
   verify:
     runs-on: ubuntu-24.04
     env:
-      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/ms-playwright
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright
       FRONTIER_AVL_CLI: ${{ github.workspace }}/frontier-infra/avl/dist/cli.js
     steps:
       - uses: actions/checkout@v4
