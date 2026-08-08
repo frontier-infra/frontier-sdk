@@ -1,0 +1,17 @@
+{
+  "schema_version": "frontier.harness.live-chaos-plan.v1",
+  "plan_id": "harness-kit-live-deployment-chaos-v1",
+  "evidence_scope": "live_deployment",
+  "overall_status": "NOT_RUN",
+  "disclaimer": "Planning records only. A package test cannot prove behavior of PostgreSQL, Redis, S3, identity, model-provider, browser-worker, or business-connector deployments.",
+  "experiments": [
+    { "id": "postgres-writer-crash", "status": "NOT_RUN", "requires": "reference PostgreSQL deployment" },
+    { "id": "redis-redelivery-and-reorder", "status": "NOT_RUN", "requires": "reference Redis deployment" },
+    { "id": "s3-evidence-write-timeout", "status": "NOT_RUN", "requires": "reference S3-compatible deployment" },
+    { "id": "identity-provider-key-rotation", "status": "NOT_RUN", "requires": "configured identity provider" },
+    { "id": "model-provider-timeout-and-malformed-output", "status": "NOT_RUN", "requires": "configured model endpoint" },
+    { "id": "browser-worker-crash-after-proposal", "status": "NOT_RUN", "requires": "browser-worker deployment" },
+    { "id": "connector-timeout-after-remote-commit", "status": "NOT_RUN", "requires": "sandbox business connector with reconciliation" },
+    { "id": "multi-process-reservation-race", "status": "NOT_RUN", "requires": "multi-replica reference deployment" }
+  ]
+}
