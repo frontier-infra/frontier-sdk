@@ -13,18 +13,46 @@ The standards remain canonical in their own repositories:
 This repository owns shared protocol schemas, generated language types, deterministic reference
 reducers, and cross-language conformance fixtures. It does not supersede those standards.
 
-## First packages
+## Package layers
 
 | Package | Purpose | Status |
 | --- | --- | --- |
 | `@frontier-infra/protocol` | JavaScript runtime, TypeScript declarations, health schema constants, and deterministic reference reducer | runnable scaffold |
 | `@frontier-infra/audit` | Node CLI (`frontier-audit`) for local static audit evidence packets using locked The Machine kit + AAR snapshots | executable vertical slice |
+| `@frontier-infra/harness-kit` | Deterministic governed-worker driver, durable event contracts, scoped verification, budgets, quarantine, override, opaque effect execution, and executable failure fixtures | executable reference slice |
+| `@frontier-infra/adapters` | Proposal-only model/browser ports, PostgreSQL/Redis/S3 receipt and queue ports, identity normalizers, gate-enforced alerts, and opaque business connectors | executable reference adapters |
+| `@frontier-infra/governance-react` | Accessible contract, approval, receipt, health, and override components | reusable UI kit |
+| `@frontier-infra/create-frontier-app` | CLI that generates a same-origin, proposal-only governed-worker starter with local and production reference deployment manifests | executable starter |
 | `frontier-protocol` | Python binding and equivalent deterministic reference reducer | runnable scaffold |
 | `conformance/runtime-health` | Shared golden fixtures consumed by both language packages and downstream adapters | canonical fixture corpus |
 
-The kernel client, application, inference, runtime, actions, and broader conformance packages will
-be added only when they have an executable vertical slice. Empty packages are deliberately not
-published as architecture placeholders.
+These layers deliberately stop short of being Journeyman. The SDK owns portable protocol and
+evidence semantics; the harness kit owns the reusable governed execution machinery; adapters own
+translation but never authority; the starter assembles those pieces; products own workflow,
+operations, and user experience. Empty packages are not published as architecture placeholders.
+
+## Start a governed worker
+
+```bash
+npx @frontier-infra/create-frontier-app my-worker
+cd my-worker
+npm install
+npm run dev
+```
+
+The generated worker starts in proposal-only mode. Installing the SDK or selecting a model never
+enables effects. Mutation requires a ratified contract, independent verifier evidence, the
+operator dial, the contract autonomy ceiling, and the verifier trust ceilings to agree at the
+deterministic gate. The effective authority is the minimum of those inputs.
+
+The harness package includes deterministic package-level chaos fixtures. Its separate live
+deployment chaos plan is shipped as `NOT_RUN`; installing or testing the package does not turn
+those planned experiments into deployment evidence.
+
+Future connector work must preserve the documented
+[context/effect boundary](docs/architecture/context-effect-boundary.md): commodity ecosystems may
+supply approved read context, but only Frontier's capability-gated opaque adapters may perform
+business effects.
 
 ## Contract ownership
 

@@ -1,0 +1,35 @@
+{
+  "release": "frontier-foundation-0.1.0-rc.1",
+  "packages": [
+    {
+      "name": "@frontier-infra/protocol",
+      "path": "packages/typescript/protocol",
+      "publish_enabled": true
+    },
+    {
+      "name": "@frontier-infra/audit",
+      "path": "packages/typescript/audit",
+      "publish_enabled": true
+    },
+    {
+      "name": "@frontier-infra/harness-kit",
+      "path": "packages/typescript/harness-kit",
+      "publish_enabled": false
+    },
+    {
+      "name": "@frontier-infra/adapters",
+      "path": "packages/typescript/adapters",
+      "publish_enabled": false
+    },
+    {
+      "name": "@frontier-infra/governance-react",
+      "path": "packages/typescript/governance-react",
+      "publish_enabled": false
+    },
+    {
+      "name": "@frontier-infra/create-frontier-app",
+      "path": "packages/typescript/create-frontier-app",
+      "publish_enabled": false
+    }
+  ]
+}
