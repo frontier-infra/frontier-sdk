@@ -13,6 +13,10 @@ The standards remain canonical in their own repositories:
 This repository owns shared protocol schemas, generated language types, deterministic reference
 reducers, and cross-language conformance fixtures. It does not supersede those standards.
 
+Current release custody: [Frontier Foundation 0.1.0-rc.1 report](docs/releases/0.1.0-rc-report.md).
+The four new JavaScript packages are assembled and tested release candidates; they have not been
+published.
+
 ## Package layers
 
 | Package | Purpose | Status |
@@ -31,14 +35,17 @@ evidence semantics; the harness kit owns the reusable governed execution machine
 translation but never authority; the starter assembles those pieces; products own workflow,
 operations, and user experience. Empty packages are not published as architecture placeholders.
 
-## Start a governed worker
+## Start a governed worker from this RC checkout
 
 ```bash
-npx @frontier-infra/create-frontier-app my-worker
+node packages/typescript/create-frontier-app/src/cli.mjs my-worker
 cd my-worker
 npm install
 npm run dev
 ```
+
+Do not use `npx @frontier-infra/create-frontier-app` until a later publication milestone records
+the registry version. This RC deliberately performs no package publication.
 
 The generated worker starts in proposal-only mode. Installing the SDK or selecting a model never
 enables effects. Mutation requires a ratified contract, independent verifier evidence, the
