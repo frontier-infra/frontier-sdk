@@ -1,0 +1,26 @@
+{
+  "schema_version": "frontier.avl.discovery.v1",
+  "deployment_id": "__PROJECT_NAME__",
+  "name": "__PROJECT_NAME__ governed worker",
+  "description": "Local AVL discovery document for the generated governed-worker starter.",
+  "endpoints": {
+    "agent_view": "/.agent",
+    "agent_manifest": "/agent.txt",
+    "llms": "/llms.txt",
+    "health": "/api/frontier/status",
+    "receipts": "/api/frontier/receipts",
+    "config": "/api/frontier/config"
+  },
+  "content_types": {
+    "agent_view": "text/agent-view; version=1",
+    "json_discovery": "application/json"
+  },
+  "actions": [
+    {
+      "id": "worker.propose",
+      "method": "POST",
+      "href": "/api/frontier/run-once",
+      "governance": "proposal-only harness gate"
+    }
+  ]
+}

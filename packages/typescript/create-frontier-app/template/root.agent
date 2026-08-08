@@ -1,0 +1,37 @@
+@meta
+  v: 1
+  route: /
+  generated: 2026-08-06T12:00:00Z
+  ttl: 5m
+
+@intent
+  purpose: Governed worker starter operator surface
+  audience: operator, verifier, agent
+  capability: read, inspect, propose
+
+@state
+  deployment{id,status,mutation_gate}:
+    __PROJECT_NAME__,proposal_only,verifier callback not configured in starter
+  services[3]{id,kind,reference}:
+    postgres,database,docker-compose.local.yml
+    redis,coordination,docker-compose.local.yml
+    s3,object-store,docker-compose.local.yml
+
+@actions
+  - id: view_status
+    method: GET
+    href: /api/frontier/status
+  - id: propose_worker_run
+    method: POST
+    href: /api/frontier/run-once
+    inputs[1]{name,type,required}:
+      intent,string,true
+
+@context
+  > This generated starter exposes a proposal-only harness surface.
+  > It does not include a production verifier callback or mutation authority.
+  > The production-reference compose and env files are illustrative configuration shapes only.
+
+@nav
+  self:      /.agent
+  peers:     [/agent.txt, /llms.txt]

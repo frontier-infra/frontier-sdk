@@ -1,0 +1,44 @@
+{
+  "id": "goal-local-demo",
+  "deployment_id": "local-governed-worker",
+  "proposed_by": "worker-local",
+  "worker_id": "worker-local",
+  "verifier_id": "verifier-local",
+  "scope": "workspace:demo",
+  "now": "2026-08-06T12:00:00.000Z",
+  "contract": {
+    "id": "contract-local-demo",
+    "goal_id": "goal-local-demo",
+    "proposed_by": "worker-local",
+    "verifier_id": "verifier-local",
+    "scope": "workspace:demo",
+    "expires_at": "2026-08-06T13:00:00.000Z",
+    "success_criteria": ["demo proposal is independently ratified"],
+    "effect_allowlist": [
+      {
+        "effect": "memory.write",
+        "scope": "workspace:demo"
+      }
+    ]
+  },
+  "verifiers": [],
+  "proposals": [
+    {
+      "id": "demo-write",
+      "type": "effect",
+      "effect": "memory.write",
+      "scope": "workspace:demo",
+      "payload": {
+        "message": "Hello from a governed worker template."
+      },
+      "idempotency_key": "demo-write-once"
+    }
+  ],
+  "adapters": [
+    {
+      "id": "memory-demo",
+      "effect": "memory.write",
+      "scopes": ["workspace:demo"]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+# __PROJECT_NAME__
+
+This generated Frontier Infra starter exposes a React operator surface and a
+Node harness endpoint for local proposal-only development.
+
+- Agent view: /.agent
+- Agent manifest: /agent.txt
+- Status API: /api/frontier/status
+
+The production-reference configuration files are examples, not a production
+implementation.
