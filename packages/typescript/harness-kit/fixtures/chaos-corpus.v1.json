@@ -1,0 +1,92 @@
+{
+  "schema_version": "frontier.harness.chaos-corpus.v1",
+  "corpus_id": "harness-kit-standard-failures-v1",
+  "evidence_scope": "simulated_package",
+  "disclaimer": "Deterministic in-process package simulations. These results are not live deployment chaos evidence.",
+  "fixtures": [
+    {
+      "id": "missing-verifier",
+      "category": "governance",
+      "scenario": "A contract names a verifier that is not registered.",
+      "expected": { "outcome": "propose_only", "can_mutate": false, "forbidden_event": "effect_committed" }
+    },
+    {
+      "id": "inert-verifier",
+      "category": "governance",
+      "scenario": "The registered verifier has no verification callback.",
+      "expected": { "outcome": "propose_only", "can_mutate": false, "required_event": "proposal_verification_rejected", "forbidden_event": "effect_committed" }
+    },
+    {
+      "id": "self-ratification",
+      "category": "governance",
+      "scenario": "The worker is also named as contract verifier.",
+      "expected": { "outcome": "propose_only", "can_mutate": false, "required_event": "contract_rejected", "forbidden_event": "effect_committed" }
+    },
+    {
+      "id": "duplicate-input",
+      "category": "ordering",
+      "scenario": "The same idempotency key arrives at the next input sequence.",
+      "expected": { "outcome": "duplicate", "required_event": "input_duplicate", "forbidden_event": "effect_committed" }
+    },
+    {
+      "id": "reordered-input",
+      "category": "ordering",
+      "scenario": "An input sequence skips the next expected sequence.",
+      "expected": { "outcome": "rejected", "required_event": "input_rejected", "forbidden_event": "effect_committed" }
+    },
+    {
+      "id": "forged-capability",
+      "category": "capability",
+      "scenario": "A valid capability identifier is paired with a forged bearer token.",
+      "expected": { "outcome": "rejected", "reason_includes": "forged", "forbidden_event": "effect_committed" }
+    },
+    {
+      "id": "expired-capability",
+      "category": "capability",
+      "scenario": "A capability is presented after its expiry.",
+      "expected": { "outcome": "rejected", "reason_includes": "expired", "forbidden_event": "effect_committed" }
+    },
+    {
+      "id": "wrong-scope-capability",
+      "category": "capability",
+      "scenario": "A capability is presented for a proposal outside its authorized scope.",
+      "expected": { "outcome": "rejected", "reason_includes": "allowed", "forbidden_event": "effect_committed" }
+    },
+    {
+      "id": "replayed-capability",
+      "category": "capability",
+      "scenario": "A one-time capability is presented again after a committed effect.",
+      "expected": { "outcome": "duplicate", "committed_event_count": 1 }
+    },
+    {
+      "id": "ambiguous-adapter-failure",
+      "category": "connector",
+      "scenario": "The adapter throws after an authorization reservation.",
+      "expected": { "outcome": "ambiguous", "required_event": "capability_reservation_failed", "forbidden_event": "effect_committed" }
+    },
+    {
+      "id": "retry-budget-quarantine",
+      "category": "budget",
+      "scenario": "An ambiguous adapter failure consumes the only allowed attempt.",
+      "expected": { "outcome": "ambiguous", "required_event": "proposal_quarantined", "forbidden_event": "effect_committed" }
+    },
+    {
+      "id": "operator-halt",
+      "category": "operator-control",
+      "scenario": "The operator halts the harness before the run starts.",
+      "expected": { "outcome": "halted", "can_mutate": false, "required_event": "halted", "forbidden_event": "effect_committed" }
+    },
+    {
+      "id": "stale-reservation-restart",
+      "category": "durability",
+      "scenario": "A restart reloads an active reservation whose lease then expires.",
+      "expected": { "outcome": "reaped", "active_effects": 0, "required_event": "capability_reservation_expired", "forbidden_event": "effect_committed" }
+    },
+    {
+      "id": "tampered-lifecycle-log",
+      "category": "durability",
+      "scenario": "A hash-valid effect commit is injected without a prior reservation.",
+      "expected": { "outcome": "rejected_on_load", "reason_includes": "active reservation" }
+    }
+  ]
+}

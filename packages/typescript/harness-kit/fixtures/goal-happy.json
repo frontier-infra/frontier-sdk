@@ -1,0 +1,55 @@
+{
+  "id": "goal-happy",
+  "deployment_id": "harness-fixture",
+  "proposed_by": "worker-a",
+  "operator_dial": 0,
+  "now": "2026-08-06T12:00:00.000Z",
+  "contract": {
+    "id": "contract-happy",
+    "goal_id": "goal-happy",
+    "proposed_by": "worker-a",
+    "verifier_id": "verifier-a",
+    "scope": "workspace:demo",
+    "expires_at": "2026-08-06T13:00:00.000Z",
+    "autonomy_ceiling": 0,
+    "success_criteria": [
+      "write demo output"
+    ],
+    "effect_allowlist": [
+      {
+        "effect": "memory.write",
+        "scope": "workspace:demo"
+      }
+    ]
+  },
+  "verifiers": [
+    {
+      "id": "verifier-a",
+      "trust_ceiling": 0,
+      "scopes": [
+        "workspace:demo"
+      ]
+    }
+  ],
+  "adapters": [
+    {
+      "id": "memory",
+      "effect": "memory.write",
+      "scopes": [
+        "workspace:demo"
+      ]
+    }
+  ],
+  "proposals": [
+    {
+      "id": "write-demo",
+      "type": "effect",
+      "effect": "memory.write",
+      "scope": "workspace:demo",
+      "idempotency_key": "write-demo-once",
+      "payload": {
+        "message": "hello"
+      }
+    }
+  ]
+}

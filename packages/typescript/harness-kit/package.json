@@ -1,0 +1,56 @@
+{
+  "name": "@frontier-infra/harness-kit",
+  "version": "0.1.0",
+  "description": "Reference proposal-only harness slice with deterministic state, scoped verification, effect gates, and unsigned L3 receipts.",
+  "type": "module",
+  "bin": {
+    "frontier-harness": "src/cli.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.mjs"
+    },
+    "./chaos-fixtures": {
+      "types": "./fixtures/run-chaos.d.ts",
+      "import": "./fixtures/run-chaos.mjs"
+    },
+    "./fixtures/chaos-corpus.v1.json": "./fixtures/chaos-corpus.v1.json",
+    "./fixtures/live-deployment-chaos.v1.json": "./fixtures/live-deployment-chaos.v1.json"
+  },
+  "files": [
+    "src",
+    "fixtures",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "test:chaos": "node fixtures/run-chaos.mjs",
+    "test:types": "npm exec --yes --package=typescript@5.9.3 -- tsc -p test/fixtures/tsconfig.json"
+  },
+  "dependencies": {
+    "@frontier-infra/protocol": "0.1.0"
+  },
+  "author": {
+    "name": "Titanium Computing / Frontier Infra",
+    "url": "https://frontierinfra.org"
+  },
+  "homepage": "https://frontierinfra.org",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/frontier-infra/frontier-sdk.git",
+    "directory": "packages/typescript/harness-kit"
+  },
+  "bugs": {
+    "url": "https://github.com/frontier-infra/frontier-sdk/issues"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
