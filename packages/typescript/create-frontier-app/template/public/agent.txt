@@ -1,0 +1,16 @@
+Agent-View: /.agent
+Content-Type: text/agent-view; version=1
+HTML: /
+LLMs: /llms.txt
+
+Routes:
+  - GET /.agent
+  - GET /api/frontier/status
+  - GET /api/frontier/receipts
+  - GET /api/frontier/config
+
+Actions:
+  - POST /api/frontier/run-once
+
+Notes:
+  This starter remains proposal-only until a real verifier and deployment-specific governance path are wired.

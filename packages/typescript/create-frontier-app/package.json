@@ -1,0 +1,45 @@
+{
+  "name": "@frontier-infra/create-frontier-app",
+  "version": "0.1.0",
+  "description": "Scaffold a proposal-only governed worker app for Frontier Infra.",
+  "type": "module",
+  "bin": {
+    "create-frontier-app": "src/cli.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.mjs"
+    }
+  },
+  "files": [
+    "src",
+    "template",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "author": {
+    "name": "Titanium Computing / Frontier Infra",
+    "url": "https://frontierinfra.org"
+  },
+  "homepage": "https://frontierinfra.org",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/frontier-infra/frontier-sdk.git",
+    "directory": "packages/typescript/create-frontier-app"
+  },
+  "bugs": {
+    "url": "https://github.com/frontier-infra/frontier-sdk/issues"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
