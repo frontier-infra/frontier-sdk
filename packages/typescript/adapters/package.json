@@ -1,0 +1,44 @@
+{
+  "name": "@frontier-infra/adapters",
+  "version": "0.1.0",
+  "description": "Dependency-injected Frontier adapter ports for proposal-only providers, storage, identity, and capability-gated connectors.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.mjs"
+    }
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@frontier-infra/harness-kit": "0.1.0"
+  },
+  "author": {
+    "name": "Titanium Computing / Frontier Infra",
+    "url": "https://frontierinfra.org"
+  },
+  "homepage": "https://frontierinfra.org",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/frontier-infra/frontier-sdk.git",
+    "directory": "packages/typescript/adapters"
+  },
+  "bugs": {
+    "url": "https://github.com/frontier-infra/frontier-sdk/issues"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
