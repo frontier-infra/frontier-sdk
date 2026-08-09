@@ -35,6 +35,30 @@ function git(args) {
   return result.status === 0 ? result.stdout.trim() : null;
 }
 
+function gitPathspec(filePath) {
+  const relative = path.relative(sdkRoot, filePath).split(path.sep).join('/');
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return null;
+  return relative;
+}
+
+function sourceStatusIgnoringOutput() {
+  const outputPathspec = gitPathspec(outputRoot);
+  const args = ['status', '--porcelain=v1', '--untracked-files=all'];
+  if (outputPathspec) {
+    args.push('--', '.', `:(exclude)${outputPathspec}`, `:(exclude)${outputPathspec}/**`);
+  }
+  return git(args);
+}
+
+const sourceStatus = sourceStatusIgnoringOutput();
+if (sourceStatus !== '') {
+  fail([
+    'Refusing to assemble RC packages from a dirty source tree.',
+    'Commit or stash source changes before running rc:pack.',
+    sourceStatus ? `Dirty entries:\n${sourceStatus}` : 'Git status was unavailable.',
+  ].join('\n'));
+}
+
 function discoverPackagePaths() {
   const root = path.join(sdkRoot, 'packages/typescript');
   return fs.readdirSync(root, { withFileTypes: true })
@@ -101,15 +125,14 @@ try {
     fs.copyFileSync(path.join(assemblyOne, artifact.filename), path.join(outputRoot, artifact.filename));
   }
 
-  const sourceStatus = git(['status', '--porcelain=v1', '--untracked-files=all']);
   const manifest = {
     schema: 'frontier.foundation.rc-artifacts.v1',
     release: releaseConfig.release,
     source: {
       repository: 'https://github.com/frontier-infra/frontier-sdk',
       commit: git(['rev-parse', 'HEAD']),
-      clean: sourceStatus === '',
-      status_sha256: crypto.createHash('sha256').update(sourceStatus ?? 'unavailable').digest('hex'),
+      clean: true,
+      status_sha256: crypto.createHash('sha256').update(sourceStatus).digest('hex'),
     },
     toolchain: {
       node: process.version,

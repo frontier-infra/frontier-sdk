@@ -1,7 +1,7 @@
 # @frontier-infra/audit
 
-Publishable Node package for local Frontier static audit packets. Current release:
-`0.1.0-rc.2`.
+Publishable Node package for local Frontier static audit packets. Current package version:
+`0.1.2`.
 
 It installs the `frontier-audit` executable and bundles generated, provenance-locked snapshots of:
 
@@ -62,11 +62,12 @@ with `evidence.json` fails even if `aar.json` itself is unchanged.
 
 Verification also requires the DID document, controller, and assertion method to match `sig.by`;
 requires `sig.by == verifier.id` and `verifier.id != subject`; requires AAR L2; and requires the
-receipt's SDK version and scorer-policy SHA-256 to match the signed evidence packet.
+receipt's `@frontier-infra/audit` package version and scorer-policy SHA-256 to match the signed
+evidence packet.
 
-The AAR stamps the exact SDK version and the SHA-256 of `audit-snapshot-lock.json` in
+The AAR stamps the exact audit package version and the SHA-256 of `audit-snapshot-lock.json` in
 `verifier.model` and `verifier.policy_sha256`. That makes receipts comparable against a pinned
-scoring procedure rather than model-generated instructions.
+scoring assembly rather than model-generated instructions.
 
 `verifier.id != subject` establishes only AAR L2 structural separation. The separately disclosed
 `verifier.independence` field defaults to `same_principal`, which is an organizational attestation

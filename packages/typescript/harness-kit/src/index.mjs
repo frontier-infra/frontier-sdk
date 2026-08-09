@@ -583,7 +583,11 @@ export function validateSemanticReplay(events) {
   const state = emptyState();
   for (const envelope of events) {
     const event = envelope.event;
-    if (event.type === 'contract_ratified') {
+    if (event.type === 'contract_proposed') {
+      if (contractHash(normalizeContract(event.contract)) !== event.contract_hash) {
+        throw new HarnessError('invalid_event_chain', `event ${envelope.sequence} contract hash mismatch`);
+      }
+    } else if (event.type === 'contract_ratified') {
       const contract = state.contracts.get(event.contract_id);
       if (!contract || contract.status !== 'proposed') {
         throw new HarnessError('invalid_event_chain', `event ${envelope.sequence} ratifies a missing or non-proposed contract`);
@@ -591,8 +595,15 @@ export function validateSemanticReplay(events) {
       if (contract.hash !== event.contract_hash) {
         throw new HarnessError('invalid_event_chain', `event ${envelope.sequence} ratified contract hash mismatch`);
       }
+      if (contract.verifier_id !== event.verifier_id) {
+        throw new HarnessError('invalid_event_chain', `event ${envelope.sequence} ratifier is not the contract verifier`);
+      }
       if (contract.proposed_by === event.verifier_id) {
         throw new HarnessError('invalid_event_chain', `event ${envelope.sequence} self-ratifies a contract`);
+      }
+    } else if (event.type === 'worker_proposed') {
+      if (event.proposal_hash !== undefined && proposalHash(event.proposal) !== event.proposal_hash) {
+        throw new HarnessError('invalid_event_chain', `event ${envelope.sequence} proposal hash mismatch`);
       }
     } else if (event.type === 'proposal_verified') {
       const recordedProposal = state.proposals.get(event.proposal_id);
@@ -603,11 +614,33 @@ export function validateSemanticReplay(events) {
       if (!contract || contract.status !== 'ratified') {
         throw new HarnessError('invalid_event_chain', `event ${envelope.sequence} verifies without a ratified contract`);
       }
+      if (event.contract_hash !== contract.hash) {
+        throw new HarnessError('invalid_event_chain', `event ${envelope.sequence} verification contract hash mismatch`);
+      }
+      if (event.verifier_id !== contract.ratified_by) {
+        throw new HarnessError('invalid_event_chain', `event ${envelope.sequence} verifier is not the ratified contract verifier`);
+      }
       if (recordedProposal.worker_id === event.verifier_id) {
         throw new HarnessError('invalid_event_chain', `event ${envelope.sequence} verifier matches worker`);
       }
       if (recordedProposal.scope !== event.scope || recordedProposal.effect !== event.effect) {
         throw new HarnessError('invalid_event_chain', `event ${envelope.sequence} verification scope or effect mismatch`);
+      }
+      if (typeof event.trust !== 'number' || event.trust <= 0 || event.trust > 1) {
+        throw new HarnessError('invalid_event_chain', `event ${envelope.sequence} verification trust must be >0 and <=1`);
+      }
+      const hasEvidence = typeof event.evidence_hash === 'string' && event.evidence_hash.trim()
+        || (Array.isArray(event.evidence_refs) && event.evidence_refs.length > 0);
+      if (!hasEvidence) {
+        throw new HarnessError('invalid_event_chain', `event ${envelope.sequence} verification must include evidence`);
+      }
+      const observedAt = parseMillis(event.observed_at, `events[${envelope.sequence}].event.observed_at`);
+      const expiresAt = parseMillis(event.expires_at, `events[${envelope.sequence}].event.expires_at`);
+      if (expiresAt <= observedAt) {
+        throw new HarnessError('invalid_event_chain', `event ${envelope.sequence} verification expires_at must be after observed_at`);
+      }
+      if (expiresAt > Date.parse(contract.expires_at)) {
+        throw new HarnessError('invalid_event_chain', `event ${envelope.sequence} verification expiry exceeds contract expiry`);
       }
     } else if (event.type === 'capability_issued') {
       const capability = event.capability;
@@ -617,6 +650,18 @@ export function validateSemanticReplay(events) {
       }
       if (verification.contract_hash !== capability.contract_hash || verification.effect !== capability.effect || verification.scope !== capability.scope) {
         throw new HarnessError('invalid_event_chain', `event ${envelope.sequence} capability does not match verification`);
+      }
+      const contract = [...state.contracts.values()].find((candidate) => candidate.hash === capability.contract_hash);
+      if (!contract || contract.status !== 'ratified') {
+        throw new HarnessError('invalid_event_chain', `event ${envelope.sequence} capability is not bound to a ratified contract`);
+      }
+      if (verification.verifier_id !== contract.ratified_by || capability.verified_by !== contract.ratified_by) {
+        throw new HarnessError('invalid_event_chain', `event ${envelope.sequence} capability verifier is not the ratified contract verifier`);
+      }
+      if (!contract.effect_allowlist.length || !contract.effect_allowlist.some((entry) => (
+        entry.effect === capability.effect && scopeMatches(entry.scope ?? contract.scope, capability.scope)
+      ))) {
+        throw new HarnessError('invalid_event_chain', `event ${envelope.sequence} capability effect is not allowed by contract`);
       }
       if (capability.token !== undefined) {
         throw new HarnessError('invalid_event_chain', `event ${envelope.sequence} persisted a capability token`);
@@ -1017,6 +1062,17 @@ export class HarnessEngine {
       return { ok: false, reason: 'contract snapshot hash does not match proposed contract' };
     }
     const selectedVerifier = normalizeIdentity(verifierId ?? contract.verifier_id, 'verifier_id');
+    if (selectedVerifier !== contract.verifier_id) {
+      appendInternal(this.store, {
+        type: 'contract_rejected',
+        at,
+        idempotency_key: `contract:${contract.id}:wrong-verifier:${selectedVerifier}:${at}`,
+        contract_id: contract.id,
+        reason_code: 'missing_verifier',
+        reason: 'contract must be ratified by its nominated verifier',
+      });
+      return { ok: false, reason: 'contract must be ratified by its nominated verifier' };
+    }
     const allowed = this.verifiers.canRatify(contract, selectedVerifier);
     if (!allowed.ok) {
       appendInternal(this.store, {
@@ -1064,6 +1120,9 @@ export class HarnessEngine {
       return reject(`proposal scope ${normalizedProposal.scope} is outside contract scope ${contract.scope}`);
     }
     const selectedVerifier = normalizeIdentity(verifierId ?? contract.ratified_by, 'verifier_id');
+    if (selectedVerifier !== contract.ratified_by) {
+      return reject('proposal verification must be performed by the ratified contract verifier', 'missing_verifier');
+    }
     const verifier = this.verifiers.get(selectedVerifier);
     if (!verifier || !verifier.active) return reject(`verifier ${selectedVerifier} is missing or inactive`, 'missing_verifier');
     const recordedProposal = state.proposals.get(normalizedProposal.id);
@@ -1306,8 +1365,8 @@ export class HarnessEngine {
     if (!scopeMatches(contract.scope, normalizedProposal.scope)) {
       return this.#rejectCapability(normalizedProposal, `proposal scope ${normalizedProposal.scope} is outside contract scope ${contract.scope}`, 'governance_gate_failed');
     }
-    const allowed = contract.effect_allowlist.length === 0
-      || contract.effect_allowlist.some((entry) => entry.effect === normalizedProposal.effect && scopeMatches(entry.scope ?? contract.scope, normalizedProposal.scope));
+    const allowed = contract.effect_allowlist.length > 0
+      && contract.effect_allowlist.some((entry) => entry.effect === normalizedProposal.effect && scopeMatches(entry.scope ?? contract.scope, normalizedProposal.scope));
     if (!allowed) {
       return this.#rejectCapability(normalizedProposal, `effect ${normalizedProposal.effect} is not allowed by contract`, 'governance_gate_failed');
     }
@@ -1330,6 +1389,9 @@ export class HarnessEngine {
     }
     if (verification.contract_hash !== contract.hash) {
       return this.#rejectCapability(normalizedProposal, 'proposal verification is bound to a different contract', 'governance_gate_failed');
+    }
+    if (verification.verifier_id !== contract.ratified_by) {
+      return this.#rejectCapability(normalizedProposal, 'proposal verification must be bound to the ratified contract verifier', 'missing_verifier');
     }
     if (verification.scope !== normalizedProposal.scope || verification.effect !== normalizedProposal.effect) {
       return this.#rejectCapability(normalizedProposal, 'proposal verification scope or effect mismatch', 'governance_gate_failed');

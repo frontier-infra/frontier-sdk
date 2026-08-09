@@ -137,6 +137,14 @@ function forgedEnvelope(sequence, event, previousHash = null) {
   };
 }
 
+function forgeChain(events) {
+  const chain = [];
+  for (const [index, event] of events.entries()) {
+    chain.push(forgedEnvelope(index + 1, event, chain.at(-1)?.receipt.receipt_hash ?? null));
+  }
+  return chain;
+}
+
 test('happy path ratifies independently and commits only through an adapter capability', async () => {
   const goal = happyGoal();
   const { harness, sink } = harnessFrom(goal);
@@ -152,6 +160,45 @@ test('happy path ratifies independently and commits only through an adapter capa
   assert.equal(state.receipts.every((receipt) => receipt.level === UNSIGNED_RECEIPT_LEVEL), true);
   assert.equal(state.receipts.every((receipt) => receipt.signature === UNSIGNED_RECEIPT_SIGNATURE), true);
   assert.equal(state.receipts.some((receipt) => /not an AAR L4/.test(receipt.warning)), true);
+});
+
+test('proposal verification and capability issuance are bound to the ratified contract verifier', async () => {
+  const goal = happyGoal({
+    proposal_verifier_id: 'verifier-2',
+    verifiers: [
+      {
+        id: 'verifier-1',
+        scopes: ['workspace:alpha'],
+        trust_ceiling: 1,
+        verify: async () => ({
+          passed: false,
+          reason: 'ratified verifier would not pass this proposal',
+        }),
+      },
+      {
+        id: 'verifier-2',
+        scopes: ['workspace:alpha'],
+        trust_ceiling: 1,
+        verify: async ({ proposal_hash, contract_hash }) => ({
+          passed: true,
+          trust: 1,
+          proposal_hash,
+          contract_hash,
+          observed_at: '2026-08-06T12:00:00.000Z',
+          expires_at: '2026-08-06T12:01:00.000Z',
+          evidence_hash: 'substitute-verifier',
+        }),
+      },
+    ],
+  });
+  const { harness, sink } = harnessFrom(goal);
+  const result = await harness.runOnce();
+
+  assert.equal(result.status, 'propose_only');
+  assert.equal(result.results[0].status, 'propose_only');
+  assert.match(result.results[0].reason, /ratified contract verifier/);
+  assert.equal(sink.length, 0);
+  assert.deepEqual(harness.state().capabilities, {});
 });
 
 test('proposal-only worker escalations do not mint capabilities or run effects', async () => {
@@ -420,7 +467,7 @@ test('capabilities require proposal verification and reject self or altered veri
   recordWorkerProposal(self, selfGoal);
   const selfVerified = await self.recordProposalVerification(selfGoal.proposals[0], 'worker-1');
   assert.equal(selfVerified.ok, false);
-  assert.match(selfVerified.reason, /worker\/proposer/);
+  assert.match(selfVerified.reason, /ratified contract verifier|worker\/proposer/);
 
   const altered = harnessFrom(goal).harness;
   altered.proposeContract();
@@ -432,6 +479,25 @@ test('capabilities require proposal verification and reject self or altered veri
   const alteredIssued = altered.issueCapability(alteredProposal);
   assert.equal(alteredIssued.ok, false);
   assert.match(alteredIssued.reason, /recorded worker proposal hash mismatch|no recorded passing/);
+});
+
+test('capability issuance denies empty or missing contract effect allowlists', async () => {
+  for (const [label, effectAllowlist] of [
+    ['empty allowlist', []],
+    ['missing allowlist', undefined],
+  ]) {
+    const goal = happyGoal({ contract: { effect_allowlist: effectAllowlist } });
+    const { harness, sink } = harnessFrom(goal);
+    harness.proposeContract();
+    assert.equal(harness.ratifyContract('contract-1').ok, true, label);
+    recordWorkerProposal(harness, goal);
+    assert.equal((await harness.recordProposalVerification(goal.proposals[0])).ok, true, label);
+    const issued = harness.issueCapability(goal.proposals[0]);
+
+    assert.equal(issued.ok, false, label);
+    assert.match(issued.reason, /not allowed by contract|effect allowlist/, label);
+    assert.equal(sink.length, 0, label);
+  }
 });
 
 test('secure tokens reject deterministic forging and unregistered adapter execution', async () => {
@@ -782,6 +848,98 @@ test('durable reload rejects tampered events, receipts, and reordered sequence',
   const reordered = structuredClone(events);
   reordered[1].sequence = 99;
   assert.throws(() => new MemoryEventStore(reordered), /sequence 99 should be 2/);
+});
+
+test('semantic replay recomputes stored hashes and rejects forged verification evidence', () => {
+  const goal = happyGoal();
+  const contract = {
+    ...goal.contract,
+    effect_allowlist: goal.contract.effect_allowlist,
+  };
+  const proposal = {
+    type: 'effect',
+    ...goal.proposals[0],
+  };
+  const realContractHash = sha256({
+    id: contract.id,
+    goal_id: contract.goal_id,
+    proposed_by: contract.proposed_by,
+    verifier_id: contract.verifier_id,
+    scope: contract.scope,
+    expires_at: contract.expires_at,
+    autonomy_ceiling: contract.autonomy_ceiling,
+    success_criteria: contract.success_criteria,
+    effect_allowlist: contract.effect_allowlist,
+  });
+  const realProposalHash = sha256({
+    id: proposal.id,
+    type: proposal.type,
+    effect: proposal.effect,
+    scope: proposal.scope,
+    payload: proposal.payload,
+    idempotency_key: proposal.idempotency_key,
+  });
+
+  const baseEvents = [{
+    type: 'contract_proposed',
+    idempotency_key: 'contract:contract-1:proposed',
+    contract,
+    contract_hash: realContractHash,
+  }, {
+    type: 'contract_ratified',
+    idempotency_key: 'contract:contract-1:ratified:verifier-1',
+    contract_id: 'contract-1',
+    contract_hash: realContractHash,
+    verifier_id: 'verifier-1',
+  }, {
+    type: 'worker_proposed',
+    idempotency_key: 'proposal:write-1',
+    worker_id: 'worker-1',
+    proposal,
+    proposal_hash: realProposalHash,
+  }];
+
+  assert.throws(() => new MemoryEventStore(forgeChain([
+    { ...baseEvents[0], contract_hash: 'forged-contract-hash' },
+    { ...baseEvents[1], contract_hash: 'forged-contract-hash' },
+  ])), /contract hash mismatch/);
+
+  assert.throws(() => new MemoryEventStore(forgeChain([
+    ...baseEvents.slice(0, 2),
+    { ...baseEvents[2], proposal_hash: 'forged-proposal-hash' },
+    {
+      type: 'proposal_verified',
+      idempotency_key: 'proposal-verified:forged-proposal-hash:verifier-1',
+      proposal_id: 'write-1',
+      proposal_hash: 'forged-proposal-hash',
+      contract_hash: realContractHash,
+      scope: 'workspace:alpha',
+      effect: 'memory.write',
+      verifier_id: 'verifier-1',
+      trust: 1,
+      evidence_hash: 'forged-evidence',
+      observed_at: '2026-08-06T12:00:00.000Z',
+      expires_at: '2026-08-06T12:01:00.000Z',
+    },
+  ])), /proposal hash mismatch/);
+
+  assert.throws(() => new MemoryEventStore(forgeChain([
+    ...baseEvents,
+    {
+      type: 'proposal_verified',
+      idempotency_key: 'proposal-verified:missing-evidence:verifier-2',
+      proposal_id: 'write-1',
+      proposal_hash: realProposalHash,
+      contract_hash: realContractHash,
+      scope: 'workspace:alpha',
+      effect: 'memory.write',
+      verifier_id: 'verifier-2',
+      trust: 1,
+      evidence_refs: [],
+      observed_at: '2026-08-06T12:00:00.000Z',
+      expires_at: '2026-08-06T12:01:00.000Z',
+    },
+  ])), /ratified contract verifier|evidence/);
 });
 
 test('append-only JSONL persists opaque execution lifecycle and rejects partial lines', async () => {

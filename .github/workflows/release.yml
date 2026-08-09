@@ -25,18 +25,22 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: frontier-infra/plugins
+          ref: 04db450bbc697e942a3e399bfc0f7681be524b95
           path: frontier-infra/plugins
       - uses: actions/checkout@v4
         with:
           repository: frontier-infra/the-machine
+          ref: 964a5b3985024cd8d24b08e108087f2b8f4216d5
           path: frontier-infra/the-machine
       - uses: actions/checkout@v4
         with:
           repository: frontier-infra/agentcontrolplane
+          ref: b65fb781dce9f41b49e3f53c8ee5d7257d4a2960
           path: frontier-infra/agentcontrolplane
       - uses: actions/checkout@v4
         with:
           repository: frontier-infra/avl
+          ref: 367b87d4fe69aa526e01d6416cb0a13385f063fc
           path: frontier-infra/avl
       - uses: actions/setup-node@v4
         with:
@@ -68,9 +72,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         working-directory: frontier-infra/frontier-sdk
         run: |
-          for pkg in packages/typescript/protocol packages/typescript/audit; do
-            name=$(node -p "require('./$pkg/package.json').name")
-            ver=$(node -p "require('./$pkg/package.json').version")
+          node scripts/release-publish-list.mjs | while IFS=$'\t' read -r pkg name ver; do
+            test -n "$pkg" || continue
             if [ "$(npm view "$name@$ver" version 2>/dev/null)" = "$ver" ]; then
               echo "$name@$ver already on the registry, skipping"
             else

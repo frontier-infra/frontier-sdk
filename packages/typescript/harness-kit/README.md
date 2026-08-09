@@ -13,6 +13,8 @@ This package is deliberately small and dependency-light. It provides:
 - an autonomy gate that requires `min(operator_dial, contract.autonomy_ceiling,
   verifier verdict trust, verifier.trust_ceiling) === 1` before any capability
   is issued
+- explicit contract `effect_allowlist` entries for every mutable effect; empty or
+  missing allowlists deny capability issuance
 - hash-chained receipts labeled `L3` and `unsigned`
 
 The receipts are fabrication-evident local records only. They are not AAR L4
@@ -59,7 +61,8 @@ raise the dial with `setOperatorDial()`, which records a receipt-backed
 verifier ceiling, and evidence-bound verifier verdict all reach `1`.
 
 Unsigned L3 receipts are hash-chain and semantic-replay checked on load, including
-capability and reservation lifecycle preconditions. They are still local,
+contract/proposal hash recomputation, ratified-verifier proposal evidence,
+capability, and reservation lifecycle preconditions. They are still local,
 unsigned records: they make tampering and lifecycle forgery detectable by this
 store, but they are not AAR L4 signatures and do not prove who wrote the log.
 

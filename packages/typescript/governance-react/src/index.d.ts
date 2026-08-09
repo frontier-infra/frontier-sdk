@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
 export type GovernanceStatus = 'pass' | 'ready' | 'pending' | 'approved' | 'rejected' | 'degraded' | 'proposal-only' | 'blocked' | 'halted' | 'invalid' | string;
 
@@ -86,10 +86,10 @@ export interface RuntimeHealthReport {
   status?: GovernanceStatus;
   can_mutate?: boolean;
   canMutate?: boolean;
-  deployment_id?: string;
-  deploymentId?: string;
-  checked_at?: string;
-  checkedAt?: string;
+  deployment_id?: string | null;
+  deploymentId?: string | null;
+  checked_at?: string | null;
+  checkedAt?: string | null;
   layers?: Record<string, RuntimeHealthLayerResult>;
   blockers?: string[];
   propose_only?: string[];
@@ -120,8 +120,8 @@ export interface OverrideControlProps {
   className?: string;
 }
 
-export function ContractCard(props: ContractCardProps): JSX.Element;
-export function ApprovalPanel(props: ApprovalPanelProps): JSX.Element;
-export function ReceiptTimeline(props: ReceiptTimelineProps): JSX.Element;
-export function RuntimeHealthPanel(props: RuntimeHealthPanelProps): JSX.Element;
-export function OverrideControl(props: OverrideControlProps): JSX.Element;
+export function ContractCard(props: ContractCardProps): ReactElement;
+export function ApprovalPanel(props: ApprovalPanelProps): ReactElement;
+export function ReceiptTimeline(props: ReceiptTimelineProps): ReactElement;
+export function RuntimeHealthPanel(props: RuntimeHealthPanelProps): ReactElement;
+export function OverrideControl(props: OverrideControlProps): ReactElement;
