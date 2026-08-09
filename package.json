@@ -7,10 +7,11 @@
     "packages/typescript/*"
   ],
   "scripts": {
-    "test:node": "node --test packages/typescript/protocol/test/*.test.mjs packages/typescript/audit/test/*.test.mjs packages/typescript/harness-kit/test/*.test.mjs packages/typescript/adapters/test/*.test.mjs packages/typescript/create-frontier-app/test/*.test.mjs packages/typescript/governance-react/test/*.test.mjs",
+    "test:node": "node --test scripts/*.test.mjs packages/typescript/protocol/test/*.test.mjs packages/typescript/audit/test/*.test.mjs packages/typescript/harness-kit/test/*.test.mjs packages/typescript/adapters/test/*.test.mjs packages/typescript/create-frontier-app/test/*.test.mjs packages/typescript/governance-react/test/*.test.mjs",
     "test:chaos": "npm run test:chaos --workspace @frontier-infra/harness-kit",
-    "test:types": "npm run test:types --workspace @frontier-infra/harness-kit",
+    "test:types": "node conformance/typescript-consumer/verify.mjs",
     "test:python": "PYTHONPATH=packages/python/frontier-protocol/src python3 -m unittest discover -s packages/python/frontier-protocol/tests -v",
+    "test:second-consumer": "node conformance/second-consumer/verify.mjs",
     "sync:consumers": "node scripts/sync-consumers.mjs",
     "check:consumers": "node scripts/sync-consumers.mjs --check",
     "sync:audit": "node scripts/sync-audit-snapshots.mjs",

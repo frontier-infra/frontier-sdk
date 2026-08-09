@@ -1,4 +1,4 @@
-import type { HarnessAdapter, HarnessCapability, HarnessProposal } from '@frontier-infra/harness-kit';
+import type { HarnessAdapter, HarnessCapability, HarnessProposal, NormalizedHarnessProposalForEffect } from '@frontier-infra/harness-kit';
 
 export const ADAPTERS_PACKAGE_VERSION: '0.1.0';
 export const DEFAULT_TIMEOUT_MS: 30000;
@@ -23,7 +23,7 @@ export interface ProposalPort {
   provider: string;
   mode?: string;
   baseUrl?: string;
-  propose(input?: Record<string, unknown>, options?: { signal?: AbortSignal }): Promise<HarnessProposal[]>;
+  propose(input?: ProposalPortInput, options?: { signal?: AbortSignal }): Promise<HarnessProposal[]>;
 }
 
 export interface FetchAdapterOptions {
@@ -36,6 +36,18 @@ export interface FetchAdapterOptions {
   maxResponseBytes?: number;
   maxProposalBytes?: number;
   headers?: Record<string, string | undefined>;
+}
+
+export interface ProposalPortInput {
+  prompt?: string;
+  input?: unknown;
+  messages?: unknown[];
+  instructions?: string;
+  metadata?: Record<string, unknown>;
+  temperature?: number;
+  max_tokens?: number;
+  system?: string;
+  [key: string]: unknown;
 }
 
 export function redactSecrets(value: unknown): unknown;
@@ -66,14 +78,16 @@ export function createGatedBusinessConnector(options: {
   timeoutMs?: number;
   execute(input: {
     client: unknown;
-    proposal: Required<HarnessProposal>;
+    proposal: NormalizedHarnessProposalForEffect;
     capability: Omit<HarnessCapability, 'token' | 'token_hash'>;
     signal: AbortSignal;
   }): Promise<unknown> | unknown;
 }): HarnessAdapter;
 
+export type OperationalAlertSeverity = typeof OPERATIONAL_ALERT_SEVERITIES[number];
+
 export interface OperationalAlert {
-  severity: 'info' | 'warning' | 'critical';
+  severity: OperationalAlertSeverity;
   message: string;
   context: unknown;
 }
@@ -110,10 +124,14 @@ export function createPostgresStatePort(options: {
   client: { query(input: { text: string; values: unknown[]; signal: AbortSignal; expectedVersion?: number }): Promise<{ rows?: Array<Record<string, unknown>> }> };
   table?: string;
   timeoutMs?: number;
-}): {
+}): PostgresStatePort;
+
+export interface PostgresStatePort {
+  readonly id: 'postgres-state';
+  readonly kind: 'state-port';
   loadState(key: string, options?: { signal?: AbortSignal }): Promise<{ state: unknown; version: unknown } | null>;
   saveState(key: string, state: unknown, options?: { signal?: AbortSignal; expectedVersion?: number }): Promise<{ ok: true; version: unknown }>;
-};
+}
 
 export function createRedisQueuePort(options: {
   client: {
@@ -122,11 +140,15 @@ export function createRedisQueuePort(options: {
   };
   keyPrefix?: string;
   timeoutMs?: number;
-}): {
+}): RedisQueuePort;
+
+export interface RedisQueuePort {
+  readonly id: 'redis-queue';
+  readonly kind: 'queue-port';
   enqueue(queue: string, item: unknown, idempotencyKey: string, options?: { signal?: AbortSignal; ttlSeconds?: number }): Promise<{ ok: boolean; duplicate?: boolean; id: string }>;
   claimIdempotency(idempotencyKey: string, options?: { signal?: AbortSignal; ttlSeconds?: number }): Promise<{ ok: boolean }>;
   ack(queue: string, id: string, options?: { signal?: AbortSignal }): Promise<{ ok: boolean }>;
-};
+}
 
 export interface ReceiptEvidenceSink {
   readonly id: string;

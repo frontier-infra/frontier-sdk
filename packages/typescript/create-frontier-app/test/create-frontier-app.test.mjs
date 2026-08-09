@@ -177,8 +177,10 @@ test('generated app UI-origin smoke serves live AVL and enforces exact local wri
 
 test('generated app builds and renders from production preview', async () => {
   const root = tmpRoot();
-  const result = scaffoldProject('render-app', { cwd: root });
-  prepareGeneratedAppForLocalInstall(result.targetDir);
+  const tarballs = packStarterChain();
+  const result = scaffoldProjectFromPackedCli('render-app', { cwd: root, tarballs });
+  prepareGeneratedAppForLocalInstall(result.targetDir, tarballs);
+  assertFrontierPackagesUseFileDeps(result.targetDir);
 
   execFileSync('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', '--loglevel=error'], {
     cwd: result.targetDir,
@@ -231,13 +233,83 @@ test('generated app builds and renders from production preview', async () => {
   }
 });
 
-function prepareGeneratedAppForLocalInstall(appDir) {
+function packStarterChain() {
+  const tarballRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-starter-tarballs-'));
+  return {
+    createFrontierApp: packPackage(packageRoot, tarballRoot),
+    governanceReact: packPackage(path.resolve(packageRoot, '..', 'governance-react'), tarballRoot),
+    harnessKit: packPackage(path.resolve(packageRoot, '..', 'harness-kit'), tarballRoot),
+    protocol: packPackage(path.resolve(packageRoot, '..', 'protocol'), tarballRoot),
+  };
+}
+
+function packPackage(packageDir, tarballRoot) {
+  const stdout = execFileSync('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', tarballRoot], {
+    cwd: packageDir,
+    encoding: 'utf8',
+    env: { ...process.env, npm_config_update_notifier: 'false' },
+  });
+  const result = JSON.parse(stdout);
+  assert.equal(result.length, 1);
+  return path.join(tarballRoot, result[0].filename);
+}
+
+function scaffoldProjectFromPackedCli(projectName, { cwd, tarballs }) {
+  const cliRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-packed-cli-'));
+  fs.writeFileSync(path.join(cliRoot, 'package.json'), `${JSON.stringify({
+    name: 'frontier-packed-cli-smoke',
+    private: true,
+    type: 'module',
+  }, null, 2)}\n`);
+  execFileSync('npm', ['install', '--offline', '--ignore-scripts', '--no-audit', '--no-fund', '--loglevel=error', tarballs.createFrontierApp], {
+    cwd: cliRoot,
+    stdio: 'pipe',
+    timeout: 120000,
+    env: {
+      ...process.env,
+      npm_config_cache: path.join(cliRoot, 'npm-cache'),
+      npm_config_update_notifier: 'false',
+    },
+  });
+  execFileSync(process.execPath, [
+    path.join(cliRoot, 'node_modules/@frontier-infra/create-frontier-app/src/cli.mjs'),
+    projectName,
+  ], {
+    cwd,
+    stdio: 'pipe',
+    timeout: 120000,
+  });
+  return {
+    projectName,
+    targetDir: path.join(cwd, projectName),
+  };
+}
+
+function prepareGeneratedAppForLocalInstall(appDir, tarballs) {
   const packageJsonPath = path.join(appDir, 'package.json');
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-  packageJson.dependencies['@frontier-infra/governance-react'] = `file:${path.resolve(packageRoot, '..', 'governance-react')}`;
-  packageJson.dependencies['@frontier-infra/harness-kit'] = `file:${path.resolve(packageRoot, '..', 'harness-kit')}`;
-  packageJson.dependencies['@frontier-infra/protocol'] = `file:${path.resolve(packageRoot, '..', 'protocol')}`;
+  packageJson.dependencies['@frontier-infra/governance-react'] = `file:${tarballs.governanceReact}`;
+  packageJson.dependencies['@frontier-infra/harness-kit'] = `file:${tarballs.harnessKit}`;
+  packageJson.dependencies['@frontier-infra/protocol'] = `file:${tarballs.protocol}`;
   fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
+  fs.writeFileSync(path.join(appDir, '.npmrc'), [
+    '@frontier-infra:registry=http://127.0.0.1:9/',
+    'fetch-retries=0',
+    'fund=false',
+    'audit=false',
+    '',
+  ].join('\n'));
+}
+
+function assertFrontierPackagesUseFileDeps(appDir) {
+  const packageJson = JSON.parse(fs.readFileSync(path.join(appDir, 'package.json'), 'utf8'));
+  for (const name of [
+    '@frontier-infra/governance-react',
+    '@frontier-infra/harness-kit',
+    '@frontier-infra/protocol',
+  ]) {
+    assert.match(packageJson.dependencies[name], /^file:/, `${name} must install from a local packed artifact`);
+  }
 }
 
 async function renderWithChromium(url, expectedText) {

@@ -1,5 +1,12 @@
+import type { RuntimeHealthContract, RuntimeHealthReport } from '@frontier-infra/protocol';
+
 export type HarnessReceiptLevel = 'L3';
 export type HarnessReceiptSignature = 'unsigned';
+export type HarnessProposalType = 'effect' | 'escalation';
+export type HarnessContractStatus = 'proposed' | 'ratified' | 'rejected';
+export type HarnessReservationStatus = 'active' | 'completed' | 'failed';
+export type HarnessCapabilityExecutionStatus = 'committed' | 'duplicate' | 'rejected' | 'ambiguous';
+export type HarnessRunResultStatus = HarnessCapabilityExecutionStatus | 'quarantined' | 'deferred' | 'escalated' | 'failed' | 'propose_only';
 
 export interface HarnessGoal {
   id: string;
@@ -42,12 +49,12 @@ export interface HarnessVerifier {
 }
 
 export interface ProposalVerificationContext {
-  proposal: Required<HarnessProposal>;
+  proposal: NormalizedHarnessProposalForEffect;
   proposal_hash: string;
   contract: HarnessContract;
   contract_hash: string;
   goal: HarnessGoal;
-  state: unknown;
+  state: HarnessSerializableState;
 }
 
 export interface ProposalVerificationVerdict {
@@ -71,7 +78,7 @@ export interface HarnessBudgets {
 
 export interface HarnessProposal {
   id?: string;
-  type?: 'effect' | 'escalation';
+  type?: HarnessProposalType;
   effect?: string;
   scope?: string;
   payload?: unknown;
@@ -79,6 +86,35 @@ export interface HarnessProposal {
   summary?: string;
   idempotency_key?: string;
 }
+
+/** Input accepted by effect-only verification, capability, and execution APIs. */
+export interface HarnessEffectProposalInput extends HarnessProposal {
+  type?: 'effect';
+  effect: string;
+  scope: string;
+  payload: unknown;
+  idempotency_key: string;
+}
+
+export interface NormalizedHarnessEffectProposal {
+  id: string;
+  type: 'effect';
+  effect: string;
+  scope: string;
+  payload: unknown;
+  idempotency_key: string;
+}
+
+export interface NormalizedHarnessEscalationProposal {
+  id: string;
+  type: 'escalation';
+  reason: string;
+  summary: string;
+  idempotency_key: string;
+}
+
+export type NormalizedHarnessProposal = NormalizedHarnessEffectProposal | NormalizedHarnessEscalationProposal;
+export type NormalizedHarnessProposalForEffect = NormalizedHarnessEffectProposal;
 
 export interface HarnessCapability {
   id: string;
@@ -114,20 +150,22 @@ export interface HarnessReservation {
   lease_secret_hash?: string;
 }
 
+export interface HarnessReceipt {
+  schema_version: string;
+  level: HarnessReceiptLevel;
+  signature: HarnessReceiptSignature;
+  previous_hash: string | null;
+  event_hash: string;
+  receipt_hash: string;
+  warning: string;
+}
+
 export interface HarnessEventEnvelope {
   schema_version: string;
   sequence: number;
   input_sequence?: number;
   event: Record<string, unknown>;
-  receipt: {
-    schema_version: string;
-    level: HarnessReceiptLevel;
-    signature: HarnessReceiptSignature;
-    previous_hash: string | null;
-    event_hash: string;
-    receipt_hash: string;
-    warning: string;
-  };
+  receipt: HarnessReceipt;
 }
 
 export interface MemoryEffectAdapterOptions {
@@ -141,13 +179,165 @@ export interface MemoryEffectAdapterOptions {
 export interface HarnessWorker {
   id: string;
   proposeContract?: (goal: HarnessGoal) => HarnessContract | null;
-  propose: (input: { goal: HarnessGoal; state: unknown; health: unknown }) => Promise<HarnessProposal[]> | HarnessProposal[];
+  propose: (input: { goal: HarnessGoal; state: HarnessSerializableState; health: RuntimeHealthContract }) => Promise<HarnessProposal[]> | HarnessProposal[];
 }
 
 export interface HarnessAdapter {
   id: string;
   effect: string;
   scopes?: string[];
+}
+
+export interface HarnessContractState extends HarnessContract {
+  status: HarnessContractStatus;
+  hash: string;
+  proposed_at: string;
+  ratified_by: string | null;
+  ratified_at?: string;
+}
+
+export type HarnessRecordedProposal = NormalizedHarnessProposal & {
+  proposal_hash: string;
+  worker_id: string;
+  at: string;
+};
+
+export interface HarnessStoredCapability extends Omit<HarnessCapability, 'token'> {
+  token?: undefined;
+  consumed: boolean;
+  reserved_by: string | null;
+  failed: boolean;
+}
+
+export interface HarnessStoredReservation extends Omit<HarnessReservation, 'lease_secret'> {
+  lease_secret?: undefined;
+  lease_secret_hash: string;
+  status: HarnessReservationStatus;
+  failed_at?: string;
+  completed_at?: string;
+  reason?: string;
+  result?: unknown;
+}
+
+export interface HarnessProposalVerificationRecord {
+  proposal_id: string;
+  proposal_hash: string;
+  contract_hash: string;
+  scope: string;
+  effect: string;
+  verifier_id: string;
+  trust: number;
+  observed_at: string;
+  expires_at: string;
+  status: 'pass';
+}
+
+export interface HarnessConsumedCapabilityRecord {
+  idempotency_key: string;
+  effect: string;
+  scope: string;
+  result: unknown;
+  reservation_id: string;
+}
+
+export interface HarnessDeferredProposal {
+  proposal_id: string;
+  reason: string;
+}
+
+export interface HarnessHealthIssue {
+  layer?: 'process' | 'scheduler' | 'execution' | 'governance';
+  reason_code?: string;
+  summary?: string;
+  reason?: string;
+  [key: string]: unknown;
+}
+
+export interface HarnessRejectedInput {
+  reason: string;
+  sequence?: number;
+}
+
+export interface HarnessRuntimeState {
+  sequence: number;
+  receipts: HarnessReceipt[];
+  contracts: Map<string, HarnessContractState>;
+  current_contract_id: string | null;
+  contract_hash: string | null;
+  proposals: Map<string, HarnessRecordedProposal>;
+  capabilities: Map<string, HarnessStoredCapability>;
+  reservations: Map<string, HarnessStoredReservation>;
+  consumed_capabilities: Map<string, HarnessConsumedCapabilityRecord>;
+  effects: Map<string, unknown>;
+  proposal_verifications: Map<string, HarnessProposalVerificationRecord>;
+  proposal_attempts: Map<string, number>;
+  deferred_proposals: HarnessDeferredProposal[];
+  quarantine: Set<string>;
+  halted: boolean;
+  halt_reason: string | null;
+  override_active: boolean;
+  override_reason: string | null;
+  operator_dial: number;
+  health_issues: HarnessHealthIssue[];
+  duplicate_inputs: string[];
+  rejected_inputs: HarnessRejectedInput[];
+  active_effects: number;
+}
+
+export interface HarnessSerializableState {
+  sequence: number;
+  receipts: HarnessReceipt[];
+  contracts: Record<string, HarnessContractState>;
+  current_contract_id: string | null;
+  contract_hash: string | null;
+  proposals: Record<string, HarnessRecordedProposal>;
+  capabilities: Record<string, HarnessStoredCapability>;
+  reservations: Record<string, HarnessStoredReservation>;
+  consumed_capabilities: Record<string, HarnessConsumedCapabilityRecord>;
+  effects: Record<string, unknown>;
+  proposal_verifications: Record<string, HarnessProposalVerificationRecord>;
+  proposal_attempts: Record<string, number>;
+  deferred_proposals: HarnessDeferredProposal[];
+  quarantine: string[];
+  halted: boolean;
+  halt_reason: string | null;
+  override_active: boolean;
+  override_reason: string | null;
+  operator_dial: number;
+  health_issues: HarnessHealthIssue[];
+  duplicate_inputs: string[];
+  rejected_inputs: HarnessRejectedInput[];
+  active_effects: number;
+}
+
+export interface HarnessRuntimeHealthResult {
+  health: RuntimeHealthContract;
+  report: RuntimeHealthReport;
+}
+
+export type HarnessCapabilityExecutionResult =
+  | { status: 'committed'; result: unknown }
+  | { status: 'duplicate'; result?: unknown }
+  | { status: 'rejected'; reason: string }
+  | {
+      status: 'ambiguous';
+      ambiguous: true;
+      reason: string;
+      error: { name: string; code?: string };
+      reservation_result: { status: string; reason?: string; result?: unknown };
+    };
+
+export interface HarnessProposalRunResult {
+  proposal_id: string;
+  status: HarnessRunResultStatus;
+  reason?: string;
+  result?: unknown;
+}
+
+export interface HarnessRunOnceResult {
+  status: RuntimeHealthReport['status'];
+  report: RuntimeHealthReport;
+  results: HarnessProposalRunResult[];
 }
 
 export class HarnessError extends Error {
@@ -159,7 +349,7 @@ export class HarnessError extends Error {
 export class MemoryEventStore {
   constructor(events?: HarnessEventEnvelope[]);
   list(): HarnessEventEnvelope[];
-  state(): unknown;
+  state(): HarnessRuntimeState;
   lastReceiptHash(): string | null;
   append(event: Record<string, unknown>, options?: { input_sequence?: number }): {
     duplicate?: boolean;
@@ -208,11 +398,11 @@ export class HarnessEngine {
   store: MemoryEventStore;
   currentTime(): string;
   elapsedMs(): number;
-  state(): unknown;
+  state(): HarnessSerializableState;
   setOperatorDial(operatorDial: number, reason?: string): { ok: true; operator_dial: number };
   proposeContract(contract?: HarnessContract | null): { contract: HarnessContract; contract_hash: string };
   ratifyContract(contractId?: string, verifierId?: string | null, contractSnapshot?: HarnessContract | null): { ok: boolean; reason?: string; verifier?: HarnessVerifier; contract_hash?: string };
-  recordProposalVerification(proposal: Required<HarnessProposal>, verifierId?: string | null, options?: {
+  recordProposalVerification(proposal: HarnessEffectProposalInput, verifierId?: string | null, options?: {
     verdict?: unknown;
     observed_at?: string;
     expires_at?: string;
@@ -220,21 +410,21 @@ export class HarnessEngine {
   halt(reason?: string): void;
   override(reason?: string): void;
   clearOverride(reason?: string): void;
-  runtimeHealth(extraIssues?: unknown[]): { health: unknown; report: unknown };
-  issueCapability(proposal: Required<HarnessProposal>, options?: { expires_at?: string; one_time?: boolean; id?: string }): { ok: true; capability: HarnessCapability } | { ok: false; reason: string };
+  runtimeHealth(extraIssues?: HarnessHealthIssue[]): HarnessRuntimeHealthResult;
+  issueCapability(proposal: HarnessEffectProposalInput, options?: { expires_at?: string; one_time?: boolean; id?: string }): { ok: true; capability: HarnessCapability } | { ok: false; reason: string };
   executeCapability(input: {
     capability: HarnessCapability;
     adapter_id: string;
-    proposal: Required<HarnessProposal>;
+    proposal: HarnessEffectProposalInput;
     signal?: AbortSignal;
-  }): Promise<{ status: 'committed' | 'duplicate' | 'rejected' | 'ambiguous'; result?: unknown; reason?: string; ambiguous?: boolean; error?: unknown; reservation_result?: unknown }>;
+  }): Promise<HarnessCapabilityExecutionResult>;
   applyCapability(input: {
     capability: HarnessCapability;
     adapter_id: string;
-    proposal: Required<HarnessProposal>;
+    proposal: HarnessEffectProposalInput;
     signal?: AbortSignal;
-  }): Promise<{ status: 'committed' | 'duplicate' | 'rejected' | 'ambiguous'; result?: unknown; reason?: string; ambiguous?: boolean; error?: unknown; reservation_result?: unknown }>;
-  runOnce(): Promise<{ status: string; report: unknown; results: unknown[] }>;
+  }): Promise<HarnessCapabilityExecutionResult>;
+  runOnce(): Promise<HarnessRunOnceResult>;
 }
 
 export const HARNESS_KIT_VERSION: '0.1.0';
@@ -246,11 +436,11 @@ export const chaosFixtures: Readonly<Record<string, Readonly<Record<string, unkn
 
 export function stableStringify(value: unknown): string;
 export function sha256(value: unknown): string;
-export function reduceHarnessEvents(events: HarnessEventEnvelope[]): unknown;
+export function reduceHarnessEvents(events: HarnessEventEnvelope[]): HarnessRuntimeState;
 export function validateEnvelopeChain(events: HarnessEventEnvelope[]): true;
 export function validateSemanticReplay(events: HarnessEventEnvelope[]): true;
 export function proposalOnlyWorker(options?: { id?: string; contract?: HarnessContract; proposals?: HarnessProposal[] }): HarnessWorker;
-export function createEffectAdapter(options: { id?: string; effect: string; scopes?: string[]; execute: (input: { proposal: Required<HarnessProposal>; capability: Omit<HarnessCapability, 'token' | 'token_hash'>; signal?: AbortSignal }) => Promise<unknown> | unknown }): HarnessAdapter;
+export function createEffectAdapter(options: { id?: string; effect: string; scopes?: string[]; execute: (input: { proposal: NormalizedHarnessProposalForEffect; capability: Omit<HarnessCapability, 'token' | 'token_hash'>; signal?: AbortSignal }) => Promise<unknown> | unknown }): HarnessAdapter;
 export const createGatedAdapter: typeof createEffectAdapter;
 export function createMemoryEffectAdapter(options: MemoryEffectAdapterOptions): HarnessAdapter;
 export function createHarnessFromGoal(goal: HarnessGoal, options?: Record<string, unknown>): HarnessEngine;

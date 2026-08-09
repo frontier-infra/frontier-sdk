@@ -22,19 +22,29 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: frontier-infra/plugins
+          ref: 04db450bbc697e942a3e399bfc0f7681be524b95
           path: frontier-infra/plugins
       - uses: actions/checkout@v4
         with:
           repository: frontier-infra/the-machine
+          ref: 964a5b3985024cd8d24b08e108087f2b8f4216d5
           path: frontier-infra/the-machine
       - uses: actions/checkout@v4
         with:
           repository: frontier-infra/agentcontrolplane
+          ref: b65fb781dce9f41b49e3f53c8ee5d7257d4a2960
           path: frontier-infra/agentcontrolplane
       - uses: actions/checkout@v4
         with:
           repository: frontier-infra/avl
+          ref: 367b87d4fe69aa526e01d6416cb0a13385f063fc
           path: frontier-infra/avl
+      - name: Read release manifest
+        id: release_manifest
+        working-directory: frontier-infra/frontier-sdk
+        run: |
+          release="$(node -e "process.stdout.write(require('./config/release-packages.json').release)")"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v4
         with:
           node-version: 22.23.1
@@ -64,6 +74,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: frontier-foundation-0.1.0-rc.1-${{ github.sha }}
-          path: frontier-infra/frontier-sdk/dist/frontier-foundation-0.1.0-rc.1/
+          name: ${{ steps.release_manifest.outputs.release }}-${{ github.sha }}
+          path: frontier-infra/frontier-sdk/dist/${{ steps.release_manifest.outputs.release }}/
           if-no-files-found: error

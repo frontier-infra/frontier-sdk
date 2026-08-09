@@ -8,12 +8,15 @@
   },
   "exports": {
     ".": {
+      "types": "./src/index.d.ts",
       "import": "./src/index.mjs"
     }
   },
+  "types": "./src/index.d.ts",
   "files": [
     "assets/generated",
     "src",
+    "README.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md"
   ],
