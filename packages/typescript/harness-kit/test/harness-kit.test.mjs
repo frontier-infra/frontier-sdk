@@ -306,9 +306,18 @@ test('stale, forged, replayed, and wrong-scope capabilities fail closed', async 
   assert.equal(wrongScope.status, 'rejected');
   assert.match(wrongScope.reason, /scope|allowed/);
 
-  const committed = await harness.executeCapability({ proposal, capability: issued.capability, adapter_id: 'memory' });
+  const replayGoal = happyGoal();
+  const replayHarness = harnessFrom(replayGoal).harness;
+  replayHarness.proposeContract();
+  assert.equal(replayHarness.ratifyContract('contract-1').ok, true);
+  const replayProposal = replayGoal.proposals[0];
+  recordWorkerProposal(replayHarness, replayGoal, replayProposal);
+  assert.equal((await replayHarness.recordProposalVerification(replayProposal)).ok, true);
+  const replayIssued = replayHarness.issueCapability(replayProposal);
+  assert.equal(replayIssued.ok, true);
+  const committed = await replayHarness.executeCapability({ proposal: replayProposal, capability: replayIssued.capability, adapter_id: 'memory' });
   assert.equal(committed.status, 'committed');
-  const replay = await harness.executeCapability({ proposal, capability: issued.capability, adapter_id: 'memory' });
+  const replay = await replayHarness.executeCapability({ proposal: replayProposal, capability: replayIssued.capability, adapter_id: 'memory' });
   assert.equal(replay.status, 'duplicate');
 
   const staleGoal = happyGoal({ proposal: { id: 'write-2', idempotency_key: 'write-2-once' } });
@@ -328,6 +337,65 @@ test('stale, forged, replayed, and wrong-scope capabilities fail closed', async 
   });
   assert.equal(staleConsumed.status, 'rejected');
   assert.match(staleConsumed.reason, /expired/);
+});
+
+test('direct execution rechecks fail-closed runtime health after capability issuance', async () => {
+  for (const [label, makeUnhealthy] of [
+    ['halt', (harness) => harness.halt('post-issuance halt')],
+    ['override', (harness) => harness.override('post-issuance override')],
+  ]) {
+    const goal = happyGoal();
+    const { harness, sink } = harnessFrom(goal);
+    harness.proposeContract();
+    assert.equal(harness.ratifyContract('contract-1').ok, true);
+    const proposal = goal.proposals[0];
+    recordWorkerProposal(harness, goal, proposal);
+    assert.equal((await harness.recordProposalVerification(proposal)).ok, true);
+    const issued = harness.issueCapability(proposal);
+    assert.equal(issued.ok, true);
+
+    makeUnhealthy(harness);
+    assert.equal(harness.runtimeHealth().report.can_mutate, false, label);
+    const result = await harness.executeCapability({ proposal, capability: issued.capability, adapter_id: 'memory' });
+    assert.equal(result.status, 'rejected', label);
+    assert.match(result.reason, /runtime health/, label);
+    assert.equal(sink.length, 0, label);
+    const eventTypes = harness.store.list().map(({ event }) => event.type);
+    assert.equal(eventTypes.includes('capability_reserved'), false, label);
+    assert.equal(eventTypes.includes('effect_committed'), false, label);
+  }
+});
+
+test('direct execution binds payload to the proposal hash stored for the capability', async () => {
+  const goal = happyGoal();
+  const { harness, sink } = harnessFrom(goal);
+  harness.proposeContract();
+  assert.equal(harness.ratifyContract('contract-1').ok, true);
+  const proposal = goal.proposals[0];
+  recordWorkerProposal(harness, goal, proposal);
+  assert.equal((await harness.recordProposalVerification(proposal)).ok, true);
+  const issued = harness.issueCapability(proposal);
+  assert.equal(issued.ok, true);
+
+  const altered = structuredClone(proposal);
+  altered.payload = { ok: false };
+  const alteredHash = sha256({
+    id: altered.id,
+    type: altered.type,
+    effect: altered.effect,
+    scope: altered.scope,
+    payload: altered.payload,
+    idempotency_key: altered.idempotency_key,
+  });
+  for (const capability of [issued.capability, { ...issued.capability, proposal_hash: alteredHash }]) {
+    const rejected = await harness.executeCapability({ proposal: altered, capability, adapter_id: 'memory' });
+    assert.equal(rejected.status, 'rejected');
+    assert.match(rejected.reason, /proposal hash/);
+  }
+  assert.equal(sink.length, 0);
+  assert.equal(harness.store.list().some(({ event }) => event.type === 'capability_reserved'), false);
+  assert.equal(harness.store.list().some(({ event }) => event.type === 'effect_committed'), false);
+  assert.equal(harness.state().capabilities[issued.capability.id].consumed, false);
 });
 
 test('capabilities require proposal verification and reject self or altered verification', async () => {
