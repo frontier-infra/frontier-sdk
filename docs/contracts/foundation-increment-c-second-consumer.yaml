@@ -1,0 +1,65 @@
+contract:
+  id: frontier-foundation-increment-c-second-consumer-v1
+  status: RATIFIED
+  goal: >-
+    Prove that a neutral second consumer can use only the published Harness Kit
+    package surface to govern one exact local effect and retain a valid receipt
+    chain.
+  scope:
+    in:
+      - conformance/second-consumer/**
+      - docs/contracts/foundation-increment-c-second-consumer.yaml
+      - docs/evidence/foundation-increment-c-second-consumer.md
+      - packages/typescript/adapters/test/adapters.test.mjs
+    out:
+      - public Harness Kit API, schema, dependency, or behavior changes
+      - Shelvie, Conductor-Titanium, Conductor Monday, and business integrations
+      - ADL or AAR source projects
+      - network access, credentials, customer data, deployments, publication, push, and tags
+  definition_of_done:
+    - The consumer installs packed protocol and Harness Kit artifacts in an isolated temporary workspace.
+    - Consumer code imports Harness Kit only through @frontier-infra/harness-kit.
+    - A proposal-only worker produces one synthetic proposal for one exact local file effect.
+    - A distinct deterministic verifier binds its verdict to the proposal, contract, and synthetic fixture evidence.
+    - One one-time capability commits exactly one file through an opaque effect adapter.
+    - Proposal tampering, replay, expiry, and post-issuance halt do not produce another effect.
+    - Harness envelope and semantic receipt validation pass from the installed package.
+    - Existing adapter tests isolate deliberate fail-closed attempts from later success assertions under Increment B semantics.
+  acceptance_tests:
+    - node conformance/second-consumer/verify.mjs
+    - npm test --prefix packages/typescript/harness-kit
+    - npm run test:types --prefix packages/typescript/harness-kit
+    - git diff --check
+  constraints:
+    - No private or relative Harness source import is permitted in consumer code.
+    - The fixture and effect are synthetic, local, deterministic, and disposable.
+    - The adapter executor remains private and accepts only the policy-bound target and record digest.
+    - Receipts remain unsigned local Harness L3 receipts and are not AAR L4 attestations.
+    - Existing unrelated dirty files are preserved and excluded from the increment commit.
+  immutable:
+    - goal
+    - scope
+    - definition_of_done
+    - acceptance_tests
+    - constraints
+  owner: frontier-foundation-harness-lane
+  autonomy_ceiling: 1
+  verification_requirements:
+    verifier_scope:
+      - local:frontier-second-consumer:artifact
+    freshness_seconds: 60
+  budget:
+    max_attempts: 1
+    max_wall_seconds: 900
+    max_tokens: 0
+    max_cost: 0
+  escalation:
+    channel: local-development-report
+    ack_slo_seconds: 0
+  proposed_by: frontier-foundation-coordinator
+  ratified_by: jason
+  contract_hash: 78b34ba66f428e45a3c3be81eddad8173be69b8907c3f41414692db0e3cb9909
+  issued_at: 2026-08-08T00:00:00Z
+  expires_at: 2026-08-11T05:00:00Z
+  revoked_at: null
+  receipt_ref: docs/evidence/foundation-increment-c-second-consumer.md

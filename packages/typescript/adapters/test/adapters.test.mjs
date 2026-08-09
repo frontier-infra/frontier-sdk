@@ -594,7 +594,7 @@ test('gated connector is opaque and executes only through the harness', async ()
     adapter_id: 'crm',
   });
   assert.equal(wrongScope.status, 'rejected');
-  assert.match(wrongScope.reason, /scope/);
+  assert.match(wrongScope.reason, /proposal hash/);
   assert.equal(calls, 0);
 
   const wrongToken = await harness.executeCapability({
@@ -629,17 +629,30 @@ test('gated connector is opaque and executes only through the harness', async ()
   assert.match(expired.reason, /expired/);
   assert.equal(calls, 0);
 
-  const committed = await harness.executeCapability({ proposal: goal.proposal, capability, adapter_id: 'crm' });
+  const successContext = await harnessWithCapability({ harnessOptions: { adapters: [connector] } });
+  const committed = await successContext.harness.executeCapability({
+    proposal: successContext.goal.proposal,
+    capability: successContext.capability,
+    adapter_id: 'crm',
+  });
   assert.equal(committed.status, 'committed');
   assert.deepEqual(committed.result, { updated: 'Ada' });
   assert.equal(calls, 1);
-  assert.equal(harness.store.list().some((event) => event.event.type === 'effect_committed'), true);
+  assert.equal(successContext.harness.store.list().some((event) => event.event.type === 'effect_committed'), true);
 
-  const replay = await harness.executeCapability({ proposal: goal.proposal, capability, adapter_id: 'crm' });
+  const replay = await successContext.harness.executeCapability({
+    proposal: successContext.goal.proposal,
+    capability: successContext.capability,
+    adapter_id: 'crm',
+  });
   assert.equal(replay.status, 'duplicate');
   assert.equal(calls, 1);
 
-  const unregistered = await harness.executeCapability({ proposal: goal.proposal, capability, adapter_id: 'notes' });
+  const unregistered = await successContext.harness.executeCapability({
+    proposal: successContext.goal.proposal,
+    capability: successContext.capability,
+    adapter_id: 'notes',
+  });
   assert.equal(unregistered.status, 'rejected');
   assert.match(unregistered.reason, /not registered/);
 });
@@ -679,13 +692,14 @@ test('operational alerts require an exact one-time gate and deliver only normali
     payload,
     idempotency_key: operationalAlertIdempotencyKey({ scope: 'workspace:alpha', payload }),
   };
-  const context = await harnessWithCapability({
+  const harnessForAlert = () => harnessWithCapability({
     contract: {
       effect_allowlist: [{ effect: proposal.effect, scope: proposal.scope }],
     },
     proposal,
     harnessOptions: { adapters: [connector] },
   });
+  const context = await harnessForAlert();
 
   const missing = await context.harness.executeCapability({ proposal, adapter_id: connector.id });
   assert.equal(missing.status, 'rejected');
@@ -703,7 +717,12 @@ test('operational alerts require an exact one-time gate and deliver only normali
   assert.equal(wrongScope.status, 'rejected');
   assert.equal(delivered.length, 0);
 
-  const committed = await context.harness.executeCapability({ proposal, capability: context.capability, adapter_id: connector.id });
+  const successContext = await harnessForAlert();
+  const committed = await successContext.harness.executeCapability({
+    proposal,
+    capability: successContext.capability,
+    adapter_id: connector.id,
+  });
   assert.equal(committed.status, 'committed');
   assert.equal(delivered.length, 1);
   assert.equal(delivered[0].client, privateClient);
@@ -713,7 +732,11 @@ test('operational alerts require an exact one-time gate and deliver only normali
   assert.equal(delivered[0].alert.context.api_key, '[REDACTED]');
   assert.equal(delivered[0].capability.token, undefined);
 
-  const replay = await context.harness.executeCapability({ proposal, capability: context.capability, adapter_id: connector.id });
+  const replay = await successContext.harness.executeCapability({
+    proposal,
+    capability: successContext.capability,
+    adapter_id: connector.id,
+  });
   assert.equal(replay.status, 'duplicate');
   assert.equal(delivered.length, 1);
 });

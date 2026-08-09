@@ -1,0 +1,9 @@
+{
+  "name": "@frontier-infra/second-consumer-conformance",
+  "version": "0.0.0-private",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node verify.mjs"
+  }
+}
