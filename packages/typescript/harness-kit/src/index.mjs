@@ -1396,7 +1396,7 @@ export class HarnessEngine {
     return { ok: false, reason };
   }
 
-  #reserveCapability({ capability, effect, scope, idempotency_key, adapter_id, lease_expires_at }) {
+  #reserveCapability({ capability, proposal_hash, effect, scope, idempotency_key, adapter_id, lease_expires_at }) {
     this.#reapExpiredReservations();
     const state = this.store.state();
     const at = this.currentTime();
@@ -1406,6 +1406,7 @@ export class HarnessEngine {
     const normalizedEffect = normalizeIdentity(effect, 'effect');
     const normalizedScope = normalizeScope(scope);
     const normalizedIdempotencyKey = normalizeIdentity(idempotency_key, 'idempotency_key');
+    const normalizedProposalHash = normalizeIdentity(proposal_hash, 'proposal_hash');
     const stored = state.capabilities.get(capability.id);
     const fail = (reason) => {
       appendInternal(this.store, {
@@ -1423,6 +1424,7 @@ export class HarnessEngine {
     if (!adapterAllows(adapter, { effect: normalizedEffect, scope: normalizedScope })) return fail(`adapter ${normalizedAdapterId} is not allowed for ${normalizedEffect} ${normalizedScope}`);
     if (!stored) return fail('capability is forged or unknown');
     if (sha256(capability.token ?? '') !== stored.token_hash) return fail('capability token is forged');
+    if (stored.proposal_hash !== normalizedProposalHash) return fail('capability proposal hash mismatch');
     if (Date.parse(stored.expires_at) <= Date.parse(at)) return fail('capability is expired');
     if (stored.one_time !== true) return fail('capability must be one-time');
     if (stored.effect !== normalizedEffect) return fail('capability effect mismatch');
@@ -1448,6 +1450,8 @@ export class HarnessEngine {
       && Date.parse(reservation.lease_expires_at) > Date.parse(at)
     ));
     if (activeReservation) return fail(`capability already reserved by ${activeReservation.id}`);
+    const health = this.runtimeHealth();
+    if (!health.report.can_mutate) return fail(`runtime health is ${health.report.status}`);
     const leaseExpiresAt = normalizeTimestamp(lease_expires_at ?? new Date(Date.parse(at) + 30_000).toISOString(), 'lease_expires_at');
     if (Date.parse(leaseExpiresAt) > Date.parse(stored.expires_at)) {
       return fail('reservation lease exceeds capability expiry');
@@ -1561,6 +1565,7 @@ export class HarnessEngine {
     if (!capability) return { status: 'rejected', reason: 'missing capability' };
     const reserved = this.#reserveCapability({
       capability,
+      proposal_hash: proposalHash(normalizedProposal),
       effect: normalizedProposal.effect,
       scope: normalizedProposal.scope,
       idempotency_key: normalizedProposal.idempotency_key,
