@@ -1,0 +1,56 @@
+contract:
+  id: frontier-foundation-harness-kit-completion-v1
+  status: RATIFIED
+  goal: >-
+    Finish the reusable Frontier Harness Kit package foundation and prove that
+    its release candidate can be rebuilt, consumed, challenged, and packaged
+    from clean pinned sources without publishing or deploying it.
+  scope:
+    in:
+      - packages/typescript/harness-kit/**
+      - packages/typescript/adapters/**
+      - packages/typescript/governance-react/**
+      - packages/typescript/create-frontier-app/**
+      - packages/typescript/audit/**
+      - conformance/typescript-consumer/**
+      - conformance/second-consumer/**
+      - scripts/rc-*.mjs
+      - scripts/release-*.mjs
+      - .github/workflows/ci.yml
+      - .github/workflows/release.yml
+      - docs/releases/0.1.0-rc-report.md
+    out:
+      - package publication, push, tag, deployment, or live credentials
+      - Rust harnessd changes
+      - Journeyman, Shelvie, Conductor-Titanium, or Monday product work
+      - connector marketplace, SSO, multitenancy, and commercial packaging
+  definition_of_done:
+    - Effect authority fails closed and is bound to the ratified verifier.
+    - Missing or empty effect allowlists cannot mint capabilities.
+    - Semantic replay rejects forged contract, proposal, verifier, and evidence bindings.
+    - Every TypeScript package is typechecked from packed public artifacts.
+    - A neutral second consumer proves one exact local effect and adversarial failures through public APIs only.
+    - RC verification covers Node, Python, TypeScript, chaos, snapshots, second consumer, and reproducible packing.
+    - Dirty source cannot produce RC artifacts.
+    - Publication candidates are derived from the manifest and no publication occurs.
+    - Clean pinned worktrees pass the complete RC gate and produce a clean-source manifest.
+    - Independent architecture, security, and code review report no remaining package-RC blocker.
+  evidence:
+    source_commit: f3ead41889de8ec6a6f6076c92de6fd4ac7f6909
+    report: docs/releases/0.1.0-rc-report.md
+    second_consumer: docs/evidence/foundation-increment-c-second-consumer.md
+    artifact_manifest: dist/frontier-foundation-0.1.0-rc.1/manifest.json
+    publication_performed: false
+    deployment_performed: false
+  explicit_non_claims:
+    - hosted CI execution
+    - Docker image or runtime verification
+    - published-package registry installation
+    - live deployment chaos or Machine-L3
+    - signed AAR L4 attestations
+    - production verifier independence, identity, or key custody
+    - external business effects
+  owner: frontier-foundation-harness-lane
+  proposed_by: frontier-foundation-coordinator
+  ratified_by: jason
+  issued_at: 2026-08-09T03:00:00Z
