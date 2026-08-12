@@ -86,7 +86,7 @@ jobs:
         working-directory: frontier-infra/frontier-sdk
         run: npm run rc:verify
       - name: Preserve the exact verified package set
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ${{ steps.release_manifest.outputs.release }}-${{ github.sha }}
           path: frontier-infra/frontier-sdk/dist/${{ steps.release_manifest.outputs.release }}/
@@ -106,7 +106,7 @@ jobs:
           path: frontier-infra/frontier-sdk
           fetch-depth: 0
           fetch-tags: true
-      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: ${{ needs.verify.outputs.artifact_name }}
           path: frontier-infra/frontier-sdk/dist/${{ needs.verify.outputs.release }}
@@ -170,22 +170,21 @@ jobs:
             fi
             npm publish "$artifact_dir/$filename" --provenance --access public --tag "$dist_tag"
           done
-      - name: Smoke-test the npm-hosted starter
-        run: |
-          smoke_root="$(mktemp -d)"
-          cd "$smoke_root"
-          npx --yes @frontier-infra/create-frontier-app@next launch-smoke
-          cd launch-smoke
-          npm install --ignore-scripts --no-audit --no-fund
-          npm run build
-      - name: Record the npm registry result
+      - name: Wait for npm publish-time scanning and record registry evidence
         working-directory: frontier-infra/frontier-sdk
         run: |
           evidence="$RUNNER_TEMP/npm-publication-evidence.tsv"
           printf 'package\tversion\tdist_tag\tintegrity\tshasum\n' > "$evidence"
           node scripts/release-publish-list.mjs | while IFS=$'\t' read -r pkg name ver dist_tag; do
             test -n "$pkg" || continue
-            test "$(npm view "$name@$ver" version)" = "$ver"
+            available=""
+            for attempt in $(seq 1 80); do
+              available="$(npm view "$name@$ver" version 2>/dev/null || true)"
+              [ "$available" = "$ver" ] && break
+              echo "Waiting for npm scanning: $name@$ver ($attempt/80)"
+              sleep 15
+            done
+            test "$available" = "$ver"
             test "$(npm view "$name" "dist-tags.$dist_tag")" = "$ver"
             integrity="$(npm view "$name@$ver" dist.integrity)"
             shasum="$(npm view "$name@$ver" dist.shasum)"
@@ -194,8 +193,17 @@ jobs:
             printf '%s\t%s\t%s\t%s\t%s\n' "$name" "$ver" "$dist_tag" "$integrity" "$shasum" >> "$evidence"
           done
       - name: Preserve the npm publication evidence
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: npm-publication-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/npm-publication-evidence.tsv
           if-no-files-found: error
+      - name: Smoke-test the npm-hosted starter
+        run: |
+          smoke_root="$(mktemp -d)"
+          cd "$smoke_root"
+          npx --yes @frontier-infra/create-frontier-app@next launch-smoke
+          cd launch-smoke
+          npm install --ignore-scripts --no-audit --no-fund
+          npm run build
