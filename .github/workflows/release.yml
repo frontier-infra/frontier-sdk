@@ -86,7 +86,7 @@ jobs:
         working-directory: frontier-infra/frontier-sdk
         run: npm run rc:verify
       - name: Preserve the exact verified package set
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: ${{ steps.release_manifest.outputs.release }}-${{ github.sha }}
           path: frontier-infra/frontier-sdk/dist/${{ steps.release_manifest.outputs.release }}/
@@ -106,7 +106,7 @@ jobs:
           path: frontier-infra/frontier-sdk
           fetch-depth: 0
           fetch-tags: true
-      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
         with:
           name: ${{ needs.verify.outputs.artifact_name }}
           path: frontier-infra/frontier-sdk/dist/${{ needs.verify.outputs.release }}
@@ -194,7 +194,7 @@ jobs:
             printf '%s\t%s\t%s\t%s\t%s\n' "$name" "$ver" "$dist_tag" "$integrity" "$shasum" >> "$evidence"
           done
       - name: Preserve the npm publication evidence
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: npm-publication-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/npm-publication-evidence.tsv
