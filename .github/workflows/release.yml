@@ -1,56 +1,73 @@
 name: Release
 
-# npm trusted publishing (OIDC): no tokens, provenance attached.
-# Requires each package to have this repo+workflow configured as a
-# trusted publisher on npmjs.com (Settings > Publishing access).
+# Manual dispatch is verification-only. Publication requires the exact Foundation
+# tag, a successful reconstruction, and approval through the npm-next environment.
 on:
   push:
-    tags: ["v*"]
+    tags: ["foundation-v*"]
   workflow_dispatch: {}
 
 permissions:
-  id-token: write
   contents: read
 
 jobs:
-  publish:
+  verify:
+    name: Release reconstruction
     runs-on: ubuntu-24.04
+    outputs:
+      artifact_name: ${{ steps.release_manifest.outputs.release }}-${{ github.sha }}
+      release: ${{ steps.release_manifest.outputs.release }}
     env:
       PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright
       FRONTIER_AVL_CLI: ${{ github.workspace }}/frontier-infra/avl/dist/cli.js
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           path: frontier-infra/frontier-sdk
-      - uses: actions/checkout@v4
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: frontier-infra/plugins
           ref: 04db450bbc697e942a3e399bfc0f7681be524b95
           path: frontier-infra/plugins
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: frontier-infra/the-machine
           ref: 964a5b3985024cd8d24b08e108087f2b8f4216d5
           path: frontier-infra/the-machine
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: frontier-infra/agentcontrolplane
           ref: b65fb781dce9f41b49e3f53c8ee5d7257d4a2960
           path: frontier-infra/agentcontrolplane
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: frontier-infra/avl
           ref: 367b87d4fe69aa526e01d6416cb0a13385f063fc
           path: frontier-infra/avl
-      - uses: actions/setup-node@v4
+      - name: Read release manifest
+        id: release_manifest
+        working-directory: frontier-infra/frontier-sdk
+        run: |
+          release="$(node -e "process.stdout.write(require('./config/release-packages.json').release)")"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+      - name: Validate the exact Foundation release tag
+        if: startsWith(github.ref, 'refs/tags/')
+        working-directory: frontier-infra/frontier-sdk
+        run: |
+          expected="$(node -e "process.stdout.write(require('./config/release-packages.json').release_tag)")"
+          test -n "$expected"
+          test "$GITHUB_REF_NAME" = "$expected"
+          test "$(git cat-file -t "refs/tags/$GITHUB_REF_NAME")" = "tag"
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22.23.1
-          registry-url: https://registry.npmjs.org
           cache: npm
           cache-dependency-path: |
             frontier-infra/frontier-sdk/package-lock.json
             frontier-infra/avl/package-lock.json
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: 3.12.8
       - name: Install locked SDK workspace
@@ -68,15 +85,117 @@ jobs:
       - name: Verify and assemble every Foundation package without publishing
         working-directory: frontier-infra/frontier-sdk
         run: npm run rc:verify
-      - name: Publish packages with new versions
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Preserve the exact verified package set
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: ${{ steps.release_manifest.outputs.release }}-${{ github.sha }}
+          path: frontier-infra/frontier-sdk/dist/${{ steps.release_manifest.outputs.release }}/
+          if-no-files-found: error
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/foundation-v')
+    needs: verify
+    runs-on: ubuntu-24.04
+    environment: npm-next
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          path: frontier-infra/frontier-sdk
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: ${{ needs.verify.outputs.artifact_name }}
+          path: frontier-infra/frontier-sdk/dist/${{ needs.verify.outputs.release }}
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22.23.1
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Install the trusted-publishing npm CLI
+        run: npm install --global npm@11.19.0
+      - name: Recheck tag, source custody, and package bytes
         working-directory: frontier-infra/frontier-sdk
         run: |
-          node scripts/release-publish-list.mjs | while IFS=$'\t' read -r pkg name ver; do
+          expected="$(node -e "process.stdout.write(require('./config/release-packages.json').release_tag)")"
+          test "$GITHUB_REF_NAME" = "$expected"
+          test "$(git cat-file -t "refs/tags/$GITHUB_REF_NAME")" = "tag"
+          artifact_dir="dist/${{ needs.verify.outputs.release }}"
+          node -e '
+            const fs = require("fs");
+            const manifest = JSON.parse(fs.readFileSync(process.argv[1]));
+            if (manifest.source.commit !== process.env.GITHUB_SHA) throw new Error("artifact source commit mismatch");
+            if (manifest.source.clean !== true) throw new Error("artifact source was not clean");
+            if (manifest.publication_performed !== false) throw new Error("artifact already claims publication");
+          ' "$artifact_dir/manifest.json"
+          (cd "$artifact_dir" && sha256sum --check SHA256SUMS)
+      - name: Publish only manifest-enabled packages
+        working-directory: frontier-infra/frontier-sdk
+        env:
+          # OIDC is preferred. This optional secret is only for the one-time
+          # bootstrap of packages that do not yet exist and therefore cannot
+          # have an npm trusted publisher configured.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            unset NODE_AUTH_TOKEN
+          fi
+          artifact_dir="dist/${{ needs.verify.outputs.release }}"
+          node scripts/release-publish-list.mjs | while IFS=$'\t' read -r pkg name ver dist_tag; do
             test -n "$pkg" || continue
-            if [ "$(npm view "$name@$ver" version 2>/dev/null)" = "$ver" ]; then
-              echo "$name@$ver already on the registry, skipping"
-            else
-              (cd "$pkg" && npm publish --provenance --access public)
+            filename="$(node -e '
+              const fs = require("fs");
+              const manifest = JSON.parse(fs.readFileSync(process.argv[1]));
+              const item = manifest.packages.find((entry) => entry.name === process.argv[2]);
+              if (!item) process.exit(1);
+              process.stdout.write(item.filename);
+            ' "$artifact_dir/manifest.json" "$name")"
+            local_integrity="$(node -e '
+              const crypto = require("crypto");
+              const fs = require("fs");
+              const bytes = fs.readFileSync(process.argv[1]);
+              process.stdout.write("sha512-" + crypto.createHash("sha512").update(bytes).digest("base64"));
+            ' "$artifact_dir/$filename")"
+            existing="$(npm view "$name@$ver" version 2>/dev/null || true)"
+            if [ "$existing" = "$ver" ]; then
+              current_tag="$(npm view "$name" "dist-tags.$dist_tag" 2>/dev/null || true)"
+              registry_integrity="$(npm view "$name@$ver" dist.integrity 2>/dev/null || true)"
+              test "$current_tag" = "$ver"
+              test "$registry_integrity" = "$local_integrity"
+              echo "$name@$ver already exists with the verified bytes on $dist_tag; skipped"
+              continue
             fi
+            npm publish "$artifact_dir/$filename" --provenance --access public --tag "$dist_tag"
           done
+      - name: Smoke-test the npm-hosted starter
+        run: |
+          smoke_root="$(mktemp -d)"
+          cd "$smoke_root"
+          npx --yes @frontier-infra/create-frontier-app@next launch-smoke
+          cd launch-smoke
+          npm install --ignore-scripts --no-audit --no-fund
+          npm run build
+      - name: Record the npm registry result
+        working-directory: frontier-infra/frontier-sdk
+        run: |
+          evidence="$RUNNER_TEMP/npm-publication-evidence.tsv"
+          printf 'package\tversion\tdist_tag\tintegrity\tshasum\n' > "$evidence"
+          node scripts/release-publish-list.mjs | while IFS=$'\t' read -r pkg name ver dist_tag; do
+            test -n "$pkg" || continue
+            test "$(npm view "$name@$ver" version)" = "$ver"
+            test "$(npm view "$name" "dist-tags.$dist_tag")" = "$ver"
+            integrity="$(npm view "$name@$ver" dist.integrity)"
+            shasum="$(npm view "$name@$ver" dist.shasum)"
+            test -n "$integrity"
+            test -n "$shasum"
+            printf '%s\t%s\t%s\t%s\t%s\n' "$name" "$ver" "$dist_tag" "$integrity" "$shasum" >> "$evidence"
+          done
+      - name: Preserve the npm publication evidence
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: npm-publication-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/npm-publication-evidence.tsv
+          if-no-files-found: error

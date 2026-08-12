@@ -36,10 +36,14 @@ for (const entry of releaseConfig.packages) {
     fail(`${entry.path}: expected package ${entry.name}, found ${packageJson.name}`);
   }
   if (entry.publish_enabled === true) {
+    if (typeof entry.dist_tag !== 'string' || !/^[a-z][a-z0-9._-]*$/.test(entry.dist_tag)) {
+      fail(`${entry.name}: publish-enabled packages require a valid dist_tag.`);
+    }
     publishable.push({
       name: entry.name,
       path: entry.path,
       version: packageJson.version,
+      dist_tag: entry.dist_tag,
     });
   }
 }
@@ -47,5 +51,5 @@ for (const entry of releaseConfig.packages) {
 if (format === 'json') {
   process.stdout.write(`${JSON.stringify(publishable, null, 2)}\n`);
 } else {
-  process.stdout.write(`${publishable.map((entry) => `${entry.path}\t${entry.name}\t${entry.version}`).join('\n')}\n`);
+  process.stdout.write(`${publishable.map((entry) => `${entry.path}\t${entry.name}\t${entry.version}\t${entry.dist_tag}`).join('\n')}\n`);
 }
