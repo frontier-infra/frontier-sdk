@@ -205,6 +205,7 @@ test('generated app builds and renders from production preview', async () => {
     cwd: result.targetDir,
     env: { ...process.env, PORT: String(port), VITE_PORT: String(uiPort) },
     stdio: ['ignore', 'pipe', 'pipe'],
+    detached: process.platform !== 'win32',
   });
 
   let apiOutput = '';
@@ -224,14 +225,38 @@ test('generated app builds and renders from production preview', async () => {
     assert.match(dom, /Run worker once/);
     assert.doesNotMatch(dom, /React is not defined/);
   } finally {
-    preview.kill('SIGTERM');
-    api.kill('SIGTERM');
     await Promise.allSettled([
-      new Promise((resolve) => preview.once('exit', resolve)),
-      new Promise((resolve) => api.once('exit', resolve)),
+      terminateChild(preview, { processGroup: true }),
+      terminateChild(api),
     ]);
   }
 });
+
+async function terminateChild(child, { processGroup = false, timeoutMs = 3000 } = {}) {
+  if (child.exitCode !== null || child.signalCode !== null) return;
+
+  const exited = new Promise((resolve) => child.once('exit', resolve));
+  const signal = (name) => {
+    try {
+      if (processGroup && process.platform !== 'win32') process.kill(-child.pid, name);
+      else child.kill(name);
+    } catch (error) {
+      if (error.code !== 'ESRCH') throw error;
+    }
+  };
+
+  signal('SIGTERM');
+  let timeout;
+  const stopped = await Promise.race([
+    exited.then(() => true),
+    new Promise((resolve) => { timeout = setTimeout(() => resolve(false), timeoutMs); }),
+  ]);
+  clearTimeout(timeout);
+  if (stopped) return;
+
+  signal('SIGKILL');
+  await exited;
+}
 
 function packStarterChain() {
   const tarballRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'frontier-starter-tarballs-'));
