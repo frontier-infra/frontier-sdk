@@ -150,3 +150,16 @@ test('every enabled package declares the public Frontier registry custody', () =
     assert.equal(manifest.publishConfig?.registry, 'https://registry.npmjs.org/', manifest.name);
   }
 });
+
+test('release waits for npm scanning before its registry smoke test', () => {
+  const workflow = fs.readFileSync(path.join(sdkRoot, '.github/workflows/release.yml'), 'utf8');
+  const waitStep = workflow.indexOf('Wait for npm publish-time scanning and record registry evidence');
+  const evidenceStep = workflow.indexOf('Preserve the npm publication evidence');
+  const smokeStep = workflow.indexOf('Smoke-test the npm-hosted starter');
+
+  assert.notEqual(waitStep, -1);
+  assert.match(workflow, /for attempt in \$\(seq 1 80\)/);
+  assert.match(workflow, /sleep 15/);
+  assert.ok(waitStep < evidenceStep);
+  assert.ok(evidenceStep < smokeStep);
+});
